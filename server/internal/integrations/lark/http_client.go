@@ -505,6 +505,102 @@ func (c *httpAPIClient) GetBotInfo(ctx context.Context, creds InstallationCreden
 	return BotInfo{OpenID: OpenID(botResp.Bot.OpenID), UnionID: unionID}, nil
 }
 
+// GetMessage retrieves a message by id via
+// GET /open-apis/im/v1/messages/{message_id}. The endpoint always wraps
+// the result in data.items[] — one element for a normal message, and a
+// forward sentinel followed by the bundled child messages for a
+// `merge_forward`. We pass user_id_type=open_id so sender.id and
+// mentions[].id come back as open_ids, matching the identifiers the
+// rest of the package keys on.
+//
+// body.content is forwarded verbatim (the raw, JSON-encoded, msg_type-
+// specific string Lark double-encodes); the enricher's flattener owns
+// interpreting it. A deleted / out-of-scope message surfaces as a Lark
+// error code, which we turn into a normal Go error so the enricher can
+// degrade to its "[unable to fetch]" placeholder without aborting the
+// inbound pipeline.
+func (c *httpAPIClient) GetMessage(ctx context.Context, creds InstallationCredentials, messageID string) ([]LarkMessage, error) {
+	if messageID == "" {
+		return nil, errors.New("lark http client: missing message_id")
+	}
+	token, err := c.tenantAccessToken(ctx, creds)
+	if err != nil {
+		return nil, err
+	}
+	q := url.Values{}
+	q.Set("user_id_type", "open_id")
+	path := "/open-apis/im/v1/messages/" + url.PathEscape(messageID) + "?" + q.Encode()
+
+	var resp struct {
+		Code int    `json:"code"`
+		Msg  string `json:"msg"`
+		Data struct {
+			Items []larkRESTMessageItem `json:"items"`
+		} `json:"data"`
+	}
+	if err := c.doJSON(ctx, http.MethodGet, path, token, nil, &resp); err != nil {
+		return nil, fmt.Errorf("lark http client: get message: %w", err)
+	}
+	if resp.Code != 0 {
+		if isTokenError(resp.Code) {
+			c.invalidateToken(creds.AppID)
+		}
+		return nil, fmt.Errorf("lark http client: get message: code=%d msg=%q", resp.Code, resp.Msg)
+	}
+
+	out := make([]LarkMessage, 0, len(resp.Data.Items))
+	for _, it := range resp.Data.Items {
+		out = append(out, it.normalize())
+	}
+	return out, nil
+}
+
+// larkRESTMessageItem is the IM v1 message item shape returned by the
+// get / list endpoints. It differs from the WS receive event in two
+// ways the enricher cares about: msg_type (not message_type), and a
+// flat `sender.id` / `mentions[].id` string (not a nested id object).
+type larkRESTMessageItem struct {
+	MessageID      string `json:"message_id"`
+	RootID         string `json:"root_id"`
+	ParentID       string `json:"parent_id"`
+	UpperMessageID string `json:"upper_message_id"`
+	MsgType        string `json:"msg_type"`
+	CreateTime     string `json:"create_time"`
+	Deleted        bool   `json:"deleted"`
+	Sender         struct {
+		ID         string `json:"id"`
+		IDType     string `json:"id_type"`
+		SenderType string `json:"sender_type"`
+	} `json:"sender"`
+	Body struct {
+		Content string `json:"content"`
+	} `json:"body"`
+	Mentions []struct {
+		Key  string `json:"key"`
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"mentions"`
+}
+
+func (it larkRESTMessageItem) normalize() LarkMessage {
+	m := LarkMessage{
+		MessageID:      it.MessageID,
+		MessageType:    it.MsgType,
+		Content:        it.Body.Content,
+		SenderID:       it.Sender.ID,
+		SenderType:     it.Sender.SenderType,
+		CreateTime:     it.CreateTime,
+		ParentID:       it.ParentID,
+		RootID:         it.RootID,
+		UpperMessageID: it.UpperMessageID,
+		Deleted:        it.Deleted,
+	}
+	for _, mn := range it.Mentions {
+		m.Mentions = append(m.Mentions, LarkMessageMention{Key: mn.Key, ID: mn.ID, Name: mn.Name})
+	}
+	return m
+}
+
 // fetchBotUnionID resolves a Bot's `union_id` from its `open_id` via
 // /open-apis/contact/v3/users/{open_id}?user_id_type=open_id. Split
 // out from GetBotInfo so the failure mode is explicit and the call

@@ -69,6 +69,46 @@ type APIClient interface {
 	// is then frozen into lark_installation alongside the app_id /
 	// app_secret in the same transaction as the installer-bind.
 	GetBotInfo(ctx context.Context, creds InstallationCredentials) (BotInfo, error)
+
+	// GetMessage fetches a message by id via
+	// GET /open-apis/im/v1/messages/{message_id}. Lark always returns an
+	// ARRAY (data.items[]): for a normal message exactly one element;
+	// for a `merge_forward` message the first element is the forward
+	// sentinel and the remaining elements are the bundled child messages
+	// (each a normal typed message linked back by upper_message_id). The
+	// inbound enricher relies on both shapes: items[0] for a quoted-reply
+	// parent, items[1:] for a forwarded transcript. Returning the raw
+	// slice keeps this method a thin transport adapter — flattening and
+	// block assembly are the enricher's job.
+	GetMessage(ctx context.Context, creds InstallationCredentials, messageID string) ([]LarkMessage, error)
+}
+
+// LarkMessage is the normalized slice of an IM v1 message item the
+// enricher needs. Body.content is passed through raw (still the
+// JSON-encoded, msg_type-specific string Lark double-encodes) so the
+// flattener — not the transport client — owns content interpretation.
+type LarkMessage struct {
+	MessageID      string
+	MessageType    string // Lark `msg_type`: text / post / image / merge_forward / …
+	Content        string // raw body.content (a JSON-encoded string)
+	SenderID       string // sender.id (open_id for users, app_id for apps)
+	SenderType     string // sender.sender_type: user / app / anonymous / …
+	CreateTime     string // epoch milliseconds, as Lark returns it (a string)
+	ParentID       string
+	RootID         string
+	UpperMessageID string // the merge_forward parent a child hangs under
+	Deleted        bool
+	Mentions       []LarkMessageMention
+}
+
+// LarkMessageMention mirrors a mentions[] entry on the IM REST item
+// shape. Note this differs from the WS receive event's mention shape:
+// here `id` is a bare open_id string, not a nested {open_id, union_id,
+// user_id} object.
+type LarkMessageMention struct {
+	Key  string // e.g. "@_user_1"
+	ID   string // open_id
+	Name string // display name (may be empty)
 }
 
 // BotInfo is the slice of /open-apis/bot/v3/info (+ a follow-up
@@ -226,4 +266,9 @@ func (s *stubAPIClient) SendBindingPromptCard(ctx context.Context, p BindingProm
 func (s *stubAPIClient) GetBotInfo(ctx context.Context, creds InstallationCredentials) (BotInfo, error) {
 	s.log.Warn("lark stub client: GetBotInfo called", "app_id", creds.AppID)
 	return BotInfo{}, ErrAPIClientNotConfigured
+}
+
+func (s *stubAPIClient) GetMessage(ctx context.Context, creds InstallationCredentials, messageID string) ([]LarkMessage, error) {
+	s.log.Warn("lark stub client: GetMessage called", "message_id", messageID)
+	return nil, ErrAPIClientNotConfigured
 }

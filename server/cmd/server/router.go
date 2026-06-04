@@ -250,7 +250,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 				// inbound messages will be silently dropped until the
 				// config is fixed, with the boot log labelling the mode
 				// "noop" so operators can spot it.
-				connectorFactory, connectorLabel := buildLarkConnectorFactory(installSvc)
+				connectorFactory, connectorLabel := buildLarkConnectorFactory(installSvc, larkClient)
 				h.LarkHub = lark.NewHub(queries, connectorFactory, dispatcher, lark.HubConfig{})
 
 				// OutcomeReplier wires the outbound side of the
@@ -943,7 +943,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 //
 // Returns the factory plus a short label for the boot log: "ws" in
 // the healthy case, "noop" in the fallback case.
-func buildLarkConnectorFactory(installSvc *lark.InstallationService) (lark.ConnectorFactory, string) {
+func buildLarkConnectorFactory(installSvc *lark.InstallationService, apiClient lark.APIClient) (lark.ConnectorFactory, string) {
 	endpointFetcher, err := lark.NewHTTPConnectionTokenFetcher(lark.HTTPConnectionTokenConfig{
 		BaseURL: strings.TrimSpace(os.Getenv("MULTICA_LARK_CALLBACK_BASE_URL")),
 		Logger:  slog.Default(),
@@ -968,10 +968,16 @@ func buildLarkConnectorFactory(installSvc *lark.InstallationService) (lark.Conne
 		}
 		return creds, nil
 	})
+	// Inbound enricher: expands quoted replies / forwarded bundles into
+	// the agent's body via the IM API before dispatch. It shares the
+	// connector's resolved credentials and runs under the connector's
+	// EnrichTimeout so it cannot overrun the Lark long-conn ACK budget.
+	enricher := lark.NewInboundEnricher(apiClient, lark.InboundEnricherConfig{Logger: slog.Default()})
 	conn, err := lark.NewWSLongConnConnector(lark.WSConnectorConfig{
 		Dialer:              dialer,
 		EndpointFetcher:     endpointFetcher,
 		FrameDecoder:        decoder,
+		Enricher:            enricher,
 		CredentialsProvider: credsProvider,
 		Logger:              slog.Default(),
 	})

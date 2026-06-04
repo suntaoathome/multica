@@ -451,3 +451,112 @@ func TestLarkJSONFrameDecoderNonTextMessageHasEmptyBody(t *testing.T) {
 		t.Error("MessageID should still be populated for non-text events")
 	}
 }
+
+// TestLarkJSONFrameDecoderPostMessageFlattened verifies that a rich-text
+// `post` message is flattened to plain text end-to-end through Decode —
+// the MUL-2951 example. Body.content is the JSON-encoded post object; we
+// marshal a Go string to get the correctly-escaped content field.
+func TestLarkJSONFrameDecoderPostMessageFlattened(t *testing.T) {
+	t.Parallel()
+	postContent := `{"title":"周报","content":[[{"tag":"text","text":"本周完成："}],[{"tag":"text","text":"Lark 集成"},{"tag":"a","href":"https://github.com/multica-ai/multica/pull/3277","text":"PR #3277"}]]}`
+	escaped, err := json.Marshal(postContent)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	raw := []byte(`{
+		"type":"event_callback",
+		"header":{"event_id":"e","event_type":"im.message.receive_v1","app_id":"a"},
+		"event":{
+			"sender":{"sender_id":{"open_id":"ou_user"}},
+			"message":{"message_id":"m","chat_id":"c","chat_type":"p2p","message_type":"post","content":` + string(escaped) + `}
+		}
+	}`)
+	msg, ok, err := NewLarkJSONFrameDecoder().Decode(raw, db.LarkInstallation{BotOpenID: "ou_bot"})
+	if err != nil || !ok {
+		t.Fatalf("Decode ok=%v err=%v", ok, err)
+	}
+	want := "周报\n本周完成：\nLark 集成 PR #3277 (https://github.com/multica-ai/multica/pull/3277)"
+	if msg.Body != want {
+		t.Errorf("post Body\n got = %q\nwant = %q", msg.Body, want)
+	}
+	if msg.MessageType != "post" {
+		t.Errorf("MessageType = %q want post", msg.MessageType)
+	}
+}
+
+// TestLarkJSONFrameDecoderPostResolvesMentions checks that @-mentions in
+// a post (carried as `at` spans with @_user_N placeholders) are resolved
+// through the same mention pipeline as text, including stripping the
+// bot's own mention.
+func TestLarkJSONFrameDecoderPostResolvesMentions(t *testing.T) {
+	t.Parallel()
+	postContent := `{"content":[[{"tag":"at","user_id":"@_user_1","user_name":""},{"tag":"text","text":"please review"},{"tag":"at","user_id":"@_user_2","user_name":""}]]}`
+	escaped, err := json.Marshal(postContent)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	raw := []byte(`{
+		"type":"event_callback",
+		"header":{"event_id":"e","event_type":"im.message.receive_v1","app_id":"a"},
+		"event":{
+			"sender":{"sender_id":{"open_id":"ou_user"}},
+			"message":{
+				"message_id":"m","chat_id":"c","chat_type":"group","message_type":"post",
+				"content":` + string(escaped) + `,
+				"mentions":[
+					{"key":"@_user_1","id":{"open_id":"ou_bot"},"name":"Bot"},
+					{"key":"@_user_2","id":{"open_id":"ou_alice"},"name":"Alice"}
+				]
+			}
+		}
+	}`)
+	msg, ok, err := NewLarkJSONFrameDecoder().Decode(raw, db.LarkInstallation{BotOpenID: "ou_bot"})
+	if err != nil || !ok {
+		t.Fatalf("Decode ok=%v err=%v", ok, err)
+	}
+	// @_user_1 is the bot → stripped; @_user_2 → @Alice.
+	want := "please review @Alice"
+	if msg.Body != want {
+		t.Errorf("post Body\n got = %q\nwant = %q", msg.Body, want)
+	}
+	if !msg.AddressedToBot {
+		t.Error("AddressedToBot should be true (bot was @-mentioned)")
+	}
+}
+
+// TestLarkJSONFrameDecoderCapturesReplyLinkage verifies parent_id /
+// root_id from a quote-reply event land on the InboundMessage so the
+// enricher can expand them.
+func TestLarkJSONFrameDecoderCapturesReplyLinkage(t *testing.T) {
+	t.Parallel()
+	raw := []byte(`{
+		"type":"event_callback",
+		"header":{"event_id":"e","event_type":"im.message.receive_v1","app_id":"a"},
+		"event":{
+			"sender":{"sender_id":{"open_id":"ou_user"}},
+			"message":{
+				"message_id":"om_child","chat_id":"c","chat_type":"group","message_type":"text",
+				"content":"{\"text\":\"去实现\"}",
+				"parent_id":"om_parent","root_id":"om_root"
+			}
+		}
+	}`)
+	msg, ok, err := NewLarkJSONFrameDecoder().Decode(raw, db.LarkInstallation{BotOpenID: "ou_bot"})
+	if err != nil || !ok {
+		t.Fatalf("Decode ok=%v err=%v", ok, err)
+	}
+	if msg.ParentID != "om_parent" {
+		t.Errorf("ParentID = %q want om_parent", msg.ParentID)
+	}
+	if msg.RootID != "om_root" {
+		t.Errorf("RootID = %q want om_root", msg.RootID)
+	}
+	if msg.MessageType != "text" {
+		t.Errorf("MessageType = %q want text", msg.MessageType)
+	}
+	// CommandBody snapshots the user's own text (pre-enrichment) so
+	// /issue parsing survives the enricher's prepended context blocks.
+	if msg.CommandBody != "去实现" {
+		t.Errorf("CommandBody = %q want 去实现", msg.CommandBody)
+	}
+}

@@ -72,6 +72,10 @@ func (s *stubAPIClientWithRecorder) GetBotInfo(ctx context.Context, creds Instal
 	return BotInfo{}, nil
 }
 
+func (s *stubAPIClientWithRecorder) GetMessage(ctx context.Context, creds InstallationCredentials, messageID string) ([]LarkMessage, error) {
+	return nil, nil
+}
+
 // stubCredentialsResolver returns a fixed plaintext secret.
 type stubCredentialsResolver struct{ secret string }
 

@@ -71,9 +71,16 @@ type EnsureChatSessionParams struct {
 // for callers that have already finalized dedup outside the
 // transaction.
 type AppendUserMessageParams struct {
-	ChatSessionID  pgtype.UUID
-	Sender         pgtype.UUID
-	Body           string
+	ChatSessionID pgtype.UUID
+	Sender        pgtype.UUID
+	// Body is the full text stored as the chat_message — including any
+	// quoted-reply / forwarded context the enricher inlined.
+	Body string
+	// CommandBody is the user's own typed text, used as the `/issue`
+	// command source. It is the un-enriched Body; when empty (callers
+	// that don't set it), `/issue` parsing falls back to Body so
+	// behavior is unchanged for the non-enriched path.
+	CommandBody    string
 	InstallationID pgtype.UUID
 	LarkMessageID  string
 	ClaimToken     pgtype.UUID

@@ -198,11 +198,22 @@ func (s *chatSessionService) AppendUserMessage(ctx context.Context, p AppendUser
 	defer tx.Rollback(ctx)
 	qtx := s.queries.WithTx(tx)
 
-	// Parse the command BEFORE the insert, so the "/issue alone → use
-	// previous user message" fallback queries from the message set
-	// that does NOT yet include the message currently being appended.
-	// Otherwise the previous-message lookup would self-reference.
-	cmd, _ := parseIssueCommand(p.Body)
+	// Parse the command from the user's OWN typed text (CommandBody),
+	// not the stored Body: the enricher prepends quoted / forwarded
+	// context to Body, which would push a `/issue …` off the first line
+	// and silently stop creating the issue (parseIssueCommand only
+	// inspects the first non-empty line). Fall back to Body when
+	// CommandBody is unset so non-enriched callers are unaffected.
+	//
+	// Parse BEFORE the insert so the "/issue alone → use previous user
+	// message" fallback queries from the message set that does NOT yet
+	// include the message currently being appended; otherwise the
+	// previous-message lookup would self-reference.
+	commandSource := p.CommandBody
+	if commandSource == "" {
+		commandSource = p.Body
+	}
+	cmd, _ := parseIssueCommand(commandSource)
 	if cmd != nil && cmd.Title == "" {
 		prev, err := qtx.GetMostRecentUserChatMessage(ctx, p.ChatSessionID)
 		if err == nil {

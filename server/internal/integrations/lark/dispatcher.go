@@ -30,6 +30,32 @@ type InboundMessage struct {
 	SenderOpenID   OpenID
 	Body           string
 	AddressedToBot bool
+
+	// MessageType is the raw Lark msg_type ("text", "post",
+	// "merge_forward", "image", "interactive", …). The decoder
+	// populates it so the inbound enricher can decide whether a
+	// message needs an HTTP round-trip to expand (merge_forward) while
+	// the dispatcher itself stays msg_type-agnostic and only reads Body.
+	MessageType string
+
+	// ParentID is the message_id of the message this one quote-replies
+	// to, taken verbatim from the receive event's `parent_id`. Empty
+	// when the message is not a reply. The enricher fetches it and
+	// prepends a <quoted_message> block. RootID is the thread/root
+	// anchor Lark also reports; we keep it for completeness but the
+	// quoted-reply expansion keys off ParentID (the immediate parent),
+	// not the root.
+	ParentID string
+	RootID   string
+
+	// CommandBody is the user's OWN typed text (the decoded Body before
+	// the enricher prepends any <quoted_message> / <forwarded_messages>
+	// context). The `/issue` command is parsed from THIS, not from the
+	// enriched Body: enrichment prepends context blocks, which would
+	// otherwise push the user's `/issue …` off the first line and
+	// silently stop creating the issue. The enricher leaves CommandBody
+	// untouched while it rewrites Body.
+	CommandBody string
 }
 
 // Outcome categorizes what the Dispatcher decided to do with an
@@ -383,6 +409,7 @@ func (d *Dispatcher) processClaimed(ctx context.Context, msg InboundMessage, ins
 		ChatSessionID:  sessionID,
 		Sender:         binding.MulticaUserID,
 		Body:           msg.Body,
+		CommandBody:    msg.CommandBody,
 		InstallationID: inst.ID,
 		LarkMessageID:  msg.MessageID,
 		ClaimToken:     claimToken,
