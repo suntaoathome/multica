@@ -312,17 +312,12 @@ export function builderArgsForTarget(
   {
     disableMacNotarize = false,
     hostPlatform = process.platform,
-    updateFeedUrl = "",
     useScopedOutputDir = false,
   } = {},
 ) {
   const builderArgs = [];
   if (version) builderArgs.push(`-c.extraMetadata.version=${version}`);
   if (disableMacNotarize) builderArgs.push("-c.mac.notarize=false");
-  if (updateFeedUrl) {
-    builderArgs.push("-c.publish.provider=generic");
-    builderArgs.push(`-c.publish.url=${updateFeedUrl}`);
-  }
   builderArgs.push(PLATFORM_CONFIG[target.platform].builderFlag);
   const requestedTargets = parsed.platformTargets[target.platform];
   if (
@@ -447,8 +442,6 @@ function main() {
     const builderArgs = builderArgsForTarget(target, parsed, version, {
       disableMacNotarize,
       hostPlatform: process.platform,
-      updateFeedUrl:
-        process.env.MULTICA_DESKTOP_UPDATE_FEED_URL?.trim() || "",
       useScopedOutputDir,
     });
 

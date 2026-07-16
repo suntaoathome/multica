@@ -548,7 +548,11 @@ if (!gotTheLock) {
 
     createWindow();
 
-    setupAutoUpdater(() => mainWindow);
+    setupAutoUpdater(() => mainWindow, {
+      enabled:
+        runtimeConfigResult.ok &&
+        runtimeConfigResult.config.apiUrl === "https://api.multica.ai",
+    });
     setupDaemonManager(() => mainWindow);
     setupLocalDirectory(() => mainWindow);
 

@@ -109,7 +109,15 @@ function checkForUpdatesOnce(): Promise<unknown> {
   return p;
 }
 
-export function setupAutoUpdater(getMainWindow: () => BrowserWindow | null): void {
+export function setupAutoUpdater(
+  getMainWindow: () => BrowserWindow | null,
+  options: { enabled?: boolean } = {},
+): void {
+  if (options.enabled === false) {
+    setupDisabledUpdater();
+    return;
+  }
+
   const preferencesFilePath = updaterPreferencesPath(app.getPath("userData"));
   let automaticUpdatesEnabled =
     DEFAULT_UPDATER_PREFERENCES.automaticUpdates;
@@ -271,4 +279,30 @@ export function setupAutoUpdater(getMainWindow: () => BrowserWindow | null): voi
   // background poll for long-running sessions. Both are torn down when the
   // user disables automatic updates and re-armed when they turn them back on.
   scheduleBackgroundChecks();
+}
+
+function setupDisabledUpdater(): void {
+  const disabledPreferences: UpdaterPreferences = {
+    automaticUpdates: false,
+  };
+
+  ipcMain.handle("updater:download", async () => []);
+  ipcMain.handle("updater:install", () => undefined);
+  ipcMain.handle("updater:get-preferences", async () => disabledPreferences);
+  ipcMain.handle(
+    "updater:set-automatic-updates",
+    async () => disabledPreferences,
+  );
+  ipcMain.handle(
+    "updater:check",
+    async (): Promise<ManualUpdateCheckResult> => {
+      const version = app.getVersion();
+      return {
+        ok: true,
+        currentVersion: version,
+        latestVersion: version,
+        available: false,
+      };
+    },
+  );
 }
