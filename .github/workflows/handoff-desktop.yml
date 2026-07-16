@@ -6,7 +6,7 @@ on:
       - codex/handoff-desktop-20260717
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   mac-arm64:
@@ -16,11 +16,6 @@ jobs:
       MULTICA_DESKTOP_DEFAULT_API_URL: https://handoff.oxygent.org.cn
       MULTICA_DESKTOP_BUILD_VERSION: 0.4.1-handoff.1
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
-      DMG_UPLOAD_URL_B64: aHR0cHM6Ly9tdWx0aWNhLWhhbmRvZmYtZG93bmxvYWRzLnMzLmNuLW5vcnRoLTEuamRjbG91ZC1vc3MuY29tL3N0YWdpbmcvYjc1NmU3ZWQ3NzYwOGMzNzAzYzAxMjBmL211bHRpY2EtZGVza3RvcC0wLjQuMS1oYW5kb2ZmLjEtbWFjLWFybTY0LmRtZz9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUpEQ18zMTZCNjg4QUUzNURBQzFGNzVCRDg5QTAwQzAxJTJGMjAyNjA3MTYlMkZjbi1ub3J0aC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI2MDcxNlQxNjA1NDNaJlgtQW16LUV4cGlyZXM9NzIwMCZYLUFtei1TaWduZWRIZWFkZXJzPWNvbnRlbnQtdHlwZSUzQmhvc3QlM0J4LWFtei1hY2wmWC1BbXotU2lnbmF0dXJlPTVlODUxMWE5YmNmOWI0NThmOGRjMjhlOGEyNmI5YjhkN2VjMDgyYWRjMTY5NmJkODViYjQyNzVjMmVkYjUyYjcK
-      DMG_BLOCKMAP_UPLOAD_URL_B64: aHR0cHM6Ly9tdWx0aWNhLWhhbmRvZmYtZG93bmxvYWRzLnMzLmNuLW5vcnRoLTEuamRjbG91ZC1vc3MuY29tL3N0YWdpbmcvYjc1NmU3ZWQ3NzYwOGMzNzAzYzAxMjBmL211bHRpY2EtZGVza3RvcC0wLjQuMS1oYW5kb2ZmLjEtbWFjLWFybTY0LmRtZy5ibG9ja21hcD9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUpEQ18zMTZCNjg4QUUzNURBQzFGNzVCRDg5QTAwQzAxJTJGMjAyNjA3MTYlMkZjbi1ub3J0aC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI2MDcxNlQxNjA1NDNaJlgtQW16LUV4cGlyZXM9NzIwMCZYLUFtei1TaWduZWRIZWFkZXJzPWNvbnRlbnQtdHlwZSUzQmhvc3QlM0J4LWFtei1hY2wmWC1BbXotU2lnbmF0dXJlPTU3ODlhYjU5OWFjZDJmMTE2OTdkNGMxZGE0M2EyNDBkMTdkZTFkNTNjMTE3M2MwMDE5NTg3ZGJiMGNlNThjNDcK
-      ZIP_UPLOAD_URL_B64: aHR0cHM6Ly9tdWx0aWNhLWhhbmRvZmYtZG93bmxvYWRzLnMzLmNuLW5vcnRoLTEuamRjbG91ZC1vc3MuY29tL3N0YWdpbmcvYjc1NmU3ZWQ3NzYwOGMzNzAzYzAxMjBmL211bHRpY2EtZGVza3RvcC0wLjQuMS1oYW5kb2ZmLjEtbWFjLWFybTY0LnppcD9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUpEQ18zMTZCNjg4QUUzNURBQzFGNzVCRDg5QTAwQzAxJTJGMjAyNjA3MTYlMkZjbi1ub3J0aC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI2MDcxNlQxNjA1NDNaJlgtQW16LUV4cGlyZXM9NzIwMCZYLUFtei1TaWduZWRIZWFkZXJzPWNvbnRlbnQtdHlwZSUzQmhvc3QlM0J4LWFtei1hY2wmWC1BbXotU2lnbmF0dXJlPWIxNjAwZDlmNzY4MTUwNmMzMDFmMjM4ZWVlZWU5NjJmMGE1YmI4YzdmMDk0YmRjMGQ2OTI5OWZiMzM4MzJmNzEK
-      ZIP_BLOCKMAP_UPLOAD_URL_B64: aHR0cHM6Ly9tdWx0aWNhLWhhbmRvZmYtZG93bmxvYWRzLnMzLmNuLW5vcnRoLTEuamRjbG91ZC1vc3MuY29tL3N0YWdpbmcvYjc1NmU3ZWQ3NzYwOGMzNzAzYzAxMjBmL211bHRpY2EtZGVza3RvcC0wLjQuMS1oYW5kb2ZmLjEtbWFjLWFybTY0LnppcC5ibG9ja21hcD9YLUFtei1BbGdvcml0aG09QVdTNC1ITUFDLVNIQTI1NiZYLUFtei1DcmVkZW50aWFsPUpEQ18zMTZCNjg4QUUzNURBQzFGNzVCRDg5QTAwQzAxJTJGMjAyNjA3MTYlMkZjbi1ub3J0aC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI2MDcxNlQxNjA1NDNaJlgtQW16LUV4cGlyZXM9NzIwMCZYLUFtei1TaWduZWRIZWFkZXJzPWNvbnRlbnQtdHlwZSUzQmhvc3QlM0J4LWFtei1hY2wmWC1BbXotU2lnbmF0dXJlPWZkNTk1Zjk0NWNkMmEyM2ZkYjhlNTk4ZDVhNTk4MWI5ZjVmMzZiZmJmNzg1ZDllMTVmMzA0N2ExODc2NjdmYWIK
-      UPDATE_YML_UPLOAD_URL_B64: aHR0cHM6Ly9tdWx0aWNhLWhhbmRvZmYtZG93bmxvYWRzLnMzLmNuLW5vcnRoLTEuamRjbG91ZC1vc3MuY29tL3N0YWdpbmcvYjc1NmU3ZWQ3NzYwOGMzNzAzYzAxMjBmL2xhdGVzdC1tYWMueW1sP1gtQW16LUFsZ29yaXRobT1BV1M0LUhNQUMtU0hBMjU2JlgtQW16LUNyZWRlbnRpYWw9SkRDXzMxNkI2ODhBRTM1REFDMUY3NUJEODlBMDBDMDElMkYyMDI2MDcxNiUyRmNuLW5vcnRoLTElMkZzMyUyRmF3czRfcmVxdWVzdCZYLUFtei1EYXRlPTIwMjYwNzE2VDE2MDU0M1omWC1BbXotRXhwaXJlcz03MjAwJlgtQW16LVNpZ25lZEhlYWRlcnM9Y29udGVudC10eXBlJTNCaG9zdCUzQngtYW16LWFjbCZYLUFtei1TaWduYXR1cmU9ZjE0Njc1YTNlMjU1OGFmMDg0MGFjYTE0YTNhNDBjMDI0MjZjNzg4MWM2ZWUyNTIxYjczNjVmN2MzNjc0Y2VkOQo=
 
     steps:
       - uses: actions/checkout@v4
@@ -45,38 +40,26 @@ jobs:
         working-directory: apps/desktop
         run: node scripts/package.mjs --mac --arm64 --publish never
 
-      - name: Upload installers to private staging keys
+      - name: Publish self-hosted desktop prerelease
         working-directory: apps/desktop
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           version="$MULTICA_DESKTOP_BUILD_VERSION"
-
-          upload() {
-            local path="$1"
-            local encoded_url="$2"
-            local content_type="$3"
-            if [[ ! -f "$path" ]]; then
-              echo "optional artifact missing: $path"
-              return 0
-            fi
-            local url
-            url="$(printf '%s' "$encoded_url" | base64 --decode)"
-            curl --fail --show-error --silent --retry 3 \
-              -X PUT \
-              -H "Content-Type: $content_type" \
-              -H "x-amz-acl: public-read" \
-              --upload-file "$path" \
-              "$url"
-          }
-
-          upload "dist/multica-desktop-${version}-mac-arm64.dmg" "$DMG_UPLOAD_URL_B64" "application/x-apple-diskimage"
-          upload "dist/multica-desktop-${version}-mac-arm64.dmg.blockmap" "$DMG_BLOCKMAP_UPLOAD_URL_B64" "application/octet-stream"
-          upload "dist/multica-desktop-${version}-mac-arm64.zip" "$ZIP_UPLOAD_URL_B64" "application/zip"
-          upload "dist/multica-desktop-${version}-mac-arm64.zip.blockmap" "$ZIP_BLOCKMAP_UPLOAD_URL_B64" "application/octet-stream"
-          upload "dist/latest-mac.yml" "$UPDATE_YML_UPLOAD_URL_B64" "application/octet-stream"
+          tag="handoff-desktop-v0.4.1-1"
+          gh release delete "$tag" --cleanup-tag --yes || true
+          gh release create "$tag" \
+            "dist/multica-desktop-${version}-mac-arm64.dmg" \
+            "dist/multica-desktop-${version}-mac-arm64.zip" \
+            --target "$GITHUB_SHA" \
+            --title "Multica Handoff Desktop v0.4.1" \
+            --notes "Self-hosted macOS Apple Silicon client for https://handoff.oxygent.org.cn" \
+            --prerelease
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: handoff-desktop-mac-arm64
           path: apps/desktop/dist
