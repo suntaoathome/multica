@@ -312,12 +312,17 @@ export function builderArgsForTarget(
   {
     disableMacNotarize = false,
     hostPlatform = process.platform,
+    updateFeedUrl = "",
     useScopedOutputDir = false,
   } = {},
 ) {
   const builderArgs = [];
   if (version) builderArgs.push(`-c.extraMetadata.version=${version}`);
   if (disableMacNotarize) builderArgs.push("-c.mac.notarize=false");
+  if (updateFeedUrl) {
+    builderArgs.push("-c.publish.provider=generic");
+    builderArgs.push(`-c.publish.url=${updateFeedUrl}`);
+  }
   builderArgs.push(PLATFORM_CONFIG[target.platform].builderFlag);
   const requestedTargets = parsed.platformTargets[target.platform];
   if (
@@ -397,9 +402,13 @@ function main() {
   }
 
   // Step 2: derive the version that should be written into the app.
-  const version = deriveVersion();
+  const version =
+    process.env.MULTICA_DESKTOP_BUILD_VERSION?.trim() || deriveVersion();
   if (version) {
-    console.log(`[package] Desktop version → ${version} (from git describe)`);
+    const source = process.env.MULTICA_DESKTOP_BUILD_VERSION
+      ? "MULTICA_DESKTOP_BUILD_VERSION"
+      : "git describe";
+    console.log(`[package] Desktop version → ${version} (from ${source})`);
   } else {
     console.warn(
       "[package] could not derive version from git; falling back to package.json",
@@ -438,6 +447,8 @@ function main() {
     const builderArgs = builderArgsForTarget(target, parsed, version, {
       disableMacNotarize,
       hostPlatform: process.platform,
+      updateFeedUrl:
+        process.env.MULTICA_DESKTOP_UPDATE_FEED_URL?.trim() || "",
       useScopedOutputDir,
     });
 

@@ -100,6 +100,26 @@ describe("DESCRIBE_ARGS", () => {
   });
 });
 
+describe("self-hosted update feed", () => {
+  it("overrides the packaged updater provider and URL", () => {
+    const args = builderArgsForTarget(
+      { platform: "mac", arch: "arm64" },
+      parsePackageArgs(["--mac", "--arm64", "--publish", "never"]),
+      "0.4.1-handoff.1",
+      {
+        hostPlatform: "darwin",
+        updateFeedUrl:
+          "https://downloads.example.test/multica/desktop/macos/arm64/",
+      },
+    );
+
+    expect(args).toContain("-c.publish.provider=generic");
+    expect(args).toContain(
+      "-c.publish.url=https://downloads.example.test/multica/desktop/macos/arm64/",
+    );
+  });
+});
+
 describe("deriveVersion (real git describe)", () => {
   // These exercise the actual `git describe` invocation — not just the
   // normalizeGitVersion string transform — because the bug that shipped a
