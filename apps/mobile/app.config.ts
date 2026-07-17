@@ -47,6 +47,19 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           ? "ai.multica.mobile.staging"
           : (process.env.EXPO_BUNDLE_IDENTIFIER_DEV ?? "ai.multica.mobile.dev"),
     },
+    android: {
+      package: isProd
+        ? "ai.multica.mobile"
+        : isStaging
+          ? "ai.multica.mobile.staging"
+          : "ai.multica.mobile.dev",
+      versionCode: 1,
+      adaptiveIcon: {
+        foregroundImage: "./assets/icon.png",
+        backgroundColor: "#ffffff",
+      },
+      permissions: ["android.permission.CAMERA"],
+    },
     plugins: [
       "expo-router",
       "expo-secure-store",
@@ -55,13 +68,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         "expo-image-picker",
         {
-          // iOS NSPhotoLibraryUsageDescription. Without this string in
-          // Info.plist, calling launchImageLibraryAsync hard-crashes on
-          // iOS 14+. Camera + microphone are disabled — we only ever read
-          // from the existing photo library.
+          // Native usage descriptions for the existing image-library and
+          // profile-camera flows. Audio recording remains disabled.
           photosPermission:
             "Allow Multica to access your photos to attach images to issues and comments.",
-          cameraPermission: false,
+          cameraPermission:
+            "Allow Multica to use your camera to take a profile photo.",
           microphonePermission: false,
         },
       ],
