@@ -49,6 +49,9 @@ jobs:
           file: Dockerfile
           push: true
           tags: oxygent-cn-north-1.jcr.service.jdcloud.com/oxygent/multica-backend:sha-${{ inputs.ref }}
+          build-args: |
+            VERSION=handoff-${{ inputs.ref }}
+            COMMIT=${{ inputs.ref }}
       - name: Build frontend
         id: frontend
         uses: docker/build-push-action@v6
@@ -57,6 +60,9 @@ jobs:
           file: Dockerfile.web
           push: true
           tags: oxygent-cn-north-1.jcr.service.jdcloud.com/oxygent/multica-web:sha-${{ inputs.ref }}
+          build-args: |
+            REMOTE_API_URL=http://backend:8080
+            NEXT_PUBLIC_APP_VERSION=handoff-${{ inputs.ref }}
 
   deploy:
     needs: build
