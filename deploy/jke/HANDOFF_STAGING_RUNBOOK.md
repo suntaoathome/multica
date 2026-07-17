@@ -79,8 +79,15 @@ chmod 0600 "$backup_dir/postgres.dump"
 
 Use the `Handoff production promotion` workflow. GitHub's
 `handoff-production` environment must have required reviewers. Supply the same
-commit and two digests from the qualified staging artifact, then type
-`PROMOTE_HANDOFF_PRODUCTION`. There is no push/tag trigger for production.
+commit and the successful Staging workflow run ID, then type
+`PROMOTE_HANDOFF_PRODUCTION`. The workflow downloads and validates the digest
+record from that exact run; operators cannot substitute arbitrary image
+digests. There is no push/tag trigger for production.
+
+Both self-hosted runners must set `HANDOFF_EXPECTED_KUBE_CONTEXT` and
+`HANDOFF_EXPECTED_KUBE_SERVER`. Their kubeconfig contexts must default to their
+own namespace (`handoff-staging` or `multica`); the deploy script rejects a
+context, API server, or namespace mismatch before invoking Helm.
 
 ```bash
 previous_revision="$(helm history multica -n multica -o json | jq -r 'map(select(.status == "deployed")) | last | .revision')"

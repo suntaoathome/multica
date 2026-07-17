@@ -36,14 +36,16 @@ for path in /login /download; do
   fi
 done
 
-# An unauthenticated WebSocket handshake must reach the WS handler. A 401/403
-# proves TLS, proxy upgrade routing, and the application endpoint are alive;
-# 404/5xx indicates a broken route or backend.
-ws_code="$(curl --http1.1 --silent --show-error --output /dev/null --write-out '%{http_code}' \
+# An unauthenticated WebSocket handshake must reach the WS handler. The dummy
+# workspace ID avoids an early request-validation response; a 101 proves TLS,
+# proxy upgrade routing, and the application endpoint are alive. curl times out
+# after the upgrade because it is not a WebSocket client, so preserve the code.
+ws_code="$(curl --http1.1 --silent --output /dev/null --write-out '%{http_code}' \
+  --max-time 2 \
   -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
   -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: SGFuZG9mZlNtb2tlVGVzdA==' \
-  "$base_url/ws")"
-[[ "$ws_code" == "101" || "$ws_code" == "401" || "$ws_code" == "403" ]] || {
+  "$base_url/ws?workspace_id=00000000-0000-0000-0000-000000000000" || true)"
+[[ "$ws_code" == "101" ]] || {
   echo "/ws upgrade probe returned HTTP $ws_code" >&2
   exit 1
 }

@@ -5,6 +5,10 @@ profile="${1:?usage: run-agent-canary.sh <profile> <agent-id> [timeout-seconds]}
 agent_id="${2:?usage: run-agent-canary.sh <profile> <agent-id> [timeout-seconds]}"
 timeout_seconds="${3:-1800}"
 [[ "$profile" == "staging" ]] || { echo "canary only accepts the staging profile" >&2; exit 2; }
+[[ "$agent_id" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]] || {
+  echo "agent-id must be a UUID" >&2
+  exit 2
+}
 [[ "$timeout_seconds" =~ ^[0-9]+$ ]] || exit 2
 
 description_file="$PWD/.handoff-canary-description.$$"

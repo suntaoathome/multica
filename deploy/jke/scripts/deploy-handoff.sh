@@ -12,6 +12,8 @@ frontend_digest="${3:-}"
 confirmation="${4:-}"
 [[ "$backend_digest" =~ ^sha256:[0-9a-f]{64}$ ]] || usage
 [[ "$frontend_digest" =~ ^sha256:[0-9a-f]{64}$ ]] || usage
+: "${HANDOFF_EXPECTED_KUBE_CONTEXT:?set HANDOFF_EXPECTED_KUBE_CONTEXT to the approved cluster context}"
+: "${HANDOFF_EXPECTED_KUBE_SERVER:?set HANDOFF_EXPECTED_KUBE_SERVER to the approved Kubernetes API URL}"
 
 case "$environment" in
   staging)
@@ -34,6 +36,17 @@ case "$environment" in
     ;;
   *) usage ;;
 esac
+
+current_context="$(kubectl config current-context)"
+current_server="$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}')"
+[[ "$current_context" == "$HANDOFF_EXPECTED_KUBE_CONTEXT" ]] || {
+  echo "kubectl context '$current_context' does not match approved context '$HANDOFF_EXPECTED_KUBE_CONTEXT'" >&2
+  exit 1
+}
+[[ "$current_server" == "$HANDOFF_EXPECTED_KUBE_SERVER" ]] || {
+  echo "Kubernetes API '$current_server' does not match the approved server" >&2
+  exit 1
+}
 
 current_namespace="$(kubectl config view --minify -o jsonpath='{..namespace}')"
 [[ -z "$current_namespace" || "$current_namespace" == "$namespace" ]] || {
