@@ -10,8 +10,13 @@ environment="${1:-}"
 backend_digest="${2:-}"
 frontend_digest="${3:-}"
 confirmation="${4:-}"
+helm_timeout="${HANDOFF_HELM_TIMEOUT:-15m}"
 [[ "$backend_digest" =~ ^sha256:[0-9a-f]{64}$ ]] || usage
 [[ "$frontend_digest" =~ ^sha256:[0-9a-f]{64}$ ]] || usage
+[[ "$helm_timeout" =~ ^[1-9][0-9]*(s|m)$ ]] || {
+  echo "HANDOFF_HELM_TIMEOUT must be a positive duration in seconds or minutes (for example 90s or 15m)" >&2
+  exit 2
+}
 : "${HANDOFF_EXPECTED_KUBE_CONTEXT:?set HANDOFF_EXPECTED_KUBE_CONTEXT to the approved cluster context}"
 : "${HANDOFF_EXPECTED_KUBE_SERVER:?set HANDOFF_EXPECTED_KUBE_SERVER to the approved Kubernetes API URL}"
 
@@ -59,7 +64,7 @@ rollback() {
   rc=$?
   if [[ $rc -ne 0 && -n "$previous_revision" ]]; then
     echo "deployment failed; rolling $release back to revision $previous_revision" >&2
-    helm rollback "$release" "$previous_revision" -n "$namespace" --wait --timeout 15m
+    helm rollback "$release" "$previous_revision" -n "$namespace" --wait --timeout "$helm_timeout"
   fi
   exit "$rc"
 }
@@ -69,7 +74,7 @@ helm upgrade --install "$release" deploy/helm/multica \
   --namespace "$namespace" --create-namespace -f "$values" \
   --set-string "images.backend.digest=$backend_digest" \
   --set-string "images.frontend.digest=$frontend_digest" \
-  --atomic --wait --timeout 15m
+  --atomic --wait --timeout "$helm_timeout"
 kubectl -n "$namespace" rollout status "deployment/${release}-backend" --timeout=5m
 kubectl -n "$namespace" rollout status "deployment/${release}-frontend" --timeout=5m
 deploy/jke/scripts/verify-handoff-environment.sh "$base_url" "$profile"

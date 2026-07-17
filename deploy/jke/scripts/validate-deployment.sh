@@ -12,6 +12,7 @@ helm template multica deploy/helm/multica -n multica \
   --set-string images.backend.digest=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
   --set-string images.frontend.digest=sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb >/dev/null
 bash -n deploy/jke/scripts/*.sh
+deploy/jke/scripts/test-handoff-scripts.sh
 
 if command -v shellcheck >/dev/null; then
   shellcheck deploy/jke/scripts/*.sh

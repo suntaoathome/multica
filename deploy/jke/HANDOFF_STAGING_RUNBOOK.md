@@ -131,6 +131,10 @@ first inspect `helm history multica -n multica`, then run `helm rollback multica
 <known-good-revision> -n multica --wait --timeout 15m`. The deploy script does
 this automatically on a failed upgrade or post-deploy smoke check.
 
+`deploy-handoff.sh` uses a 15-minute Helm timeout by default. For a bounded
+staging drill, set a validated seconds/minutes duration such as
+`HANDOFF_HELM_TIMEOUT=90s`; the same timeout is used for automatic rollback.
+
 The source of truth is GitHub plus immutable registry tags. Kubernetes Secrets
 stay out of Git and Issues. If a staging secret is lost, rotate and recreate it;
 never copy the production JWT or database password into staging.
