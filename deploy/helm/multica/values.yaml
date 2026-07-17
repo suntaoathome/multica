@@ -18,6 +18,10 @@ images:
     tag: pg17
     pullPolicy: IfNotPresent
 
+# Optional registry credentials applied to every chart-managed pod.
+# Example: [{name: jcr-pull-secret}]
+imagePullSecrets: []
+
 # -----------------------------------------------------------------------------
 # Pre-created Secret with sensitive values. Create it before `helm install`:
 #
@@ -126,6 +130,9 @@ backend:
     disableWorkspaceCreation: false
     googleClientId: ""
     googleRedirectUri: http://multica.dev.lan/auth/callback
+    # Public URL where the backend/API is reachable, no trailing slash.
+    # Used for daemon setup commands, webhook URLs, and attachment endpoints.
+    publicUrl: http://api.multica.dev.lan
     s3Bucket: ""
     s3Region: us-west-2
     cloudfrontDomain: ""
@@ -151,6 +158,20 @@ backend:
 # -----------------------------------------------------------------------------
 frontend:
   replicas: 1
+  config:
+    nodeOptions: ""
+    desktopDownloads:
+      version: ""
+      macArm64DmgUrl: ""
+      macArm64ZipUrl: ""
+      winX64ExeUrl: ""
+      winArm64ExeUrl: ""
+      linuxAmd64AppImageUrl: ""
+      linuxAmd64DebUrl: ""
+      linuxAmd64RpmUrl: ""
+      linuxArm64AppImageUrl: ""
+      linuxArm64DebUrl: ""
+      linuxArm64RpmUrl: ""
   # Compatibility shim for the prebuilt multica-web image.
   compatibility:
     # When true (default) the chart creates an ExternalName Service literally

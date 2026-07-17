@@ -3,6 +3,7 @@ import {
   DEFAULT_RUNTIME_CONFIG,
   deriveWsUrl,
   parseRuntimeConfig,
+  runtimeConfigFromApiUrl,
   runtimeConfigFromDevEnv,
 } from "./runtime-config";
 
@@ -29,6 +30,15 @@ describe("runtime config", () => {
       apiUrl: "https://congvc-x99.taila6fa8a.ts.net:18443",
       wsUrl: "wss://congvc-x99.taila6fa8a.ts.net:18443/ws",
       appUrl: "https://congvc-x99.taila6fa8a.ts.net:18443",
+    });
+  });
+
+  it("derives a self-hosted packaged default from one API URL", () => {
+    expect(runtimeConfigFromApiUrl("https://handoff.oxygent.org.cn/")).toEqual({
+      schemaVersion: 1,
+      apiUrl: "https://handoff.oxygent.org.cn",
+      wsUrl: "wss://handoff.oxygent.org.cn/ws",
+      appUrl: "https://handoff.oxygent.org.cn",
     });
   });
 

@@ -1,0 +1,163 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: multica-handoff-nginx
+  namespace: multica
+  labels:
+    app.kubernetes.io/name: multica
+    app.kubernetes.io/instance: multica
+    app.kubernetes.io/component: handoff-proxy
+data:
+  nginx.conf: |
+    events {}
+
+    http {
+      map $http_upgrade $connection_upgrade {
+        default upgrade;
+        '' close;
+      }
+
+      server {
+        listen 8080;
+        server_name handoff.oxygent.org.cn;
+        return 301 https://$host$request_uri;
+      }
+
+      server {
+        listen 8081;
+        server_name handoff.oxygent.org.cn;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+
+        location = /healthz {
+          proxy_pass http://multica-backend:8080;
+        }
+
+        location = /api/daemon/ws {
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection $connection_upgrade;
+          proxy_pass http://multica-backend:8080;
+        }
+
+        location /api/ {
+          proxy_pass http://multica-backend:8080;
+        }
+
+        location /auth/ {
+          proxy_pass http://multica-backend:8080;
+        }
+
+        location /uploads/ {
+          proxy_pass http://multica-backend:8080;
+        }
+
+        location /ws {
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection $connection_upgrade;
+          proxy_pass http://multica-backend:8080;
+        }
+
+        location / {
+          proxy_pass http://multica-frontend:3000;
+        }
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multica-handoff-proxy
+  namespace: multica
+  labels:
+    app.kubernetes.io/name: multica
+    app.kubernetes.io/instance: multica
+    app.kubernetes.io/component: handoff-proxy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: multica
+      app.kubernetes.io/instance: multica
+      app.kubernetes.io/component: handoff-proxy
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: multica
+        app.kubernetes.io/instance: multica
+        app.kubernetes.io/component: handoff-proxy
+    spec:
+      imagePullSecrets:
+        - name: jcr-pull-secret
+      containers:
+        - name: nginx
+          image: oxygent-cn-north-1.jcr.service.jdcloud.com/oxygent/nginx:1.27-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: app-http
+              containerPort: 8081
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+              readOnly: true
+          readinessProbe:
+            tcpSocket:
+              port: 8081
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: multica-handoff-nginx
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: multica-frontend-public
+  namespace: multica
+  labels:
+    app.kubernetes.io/name: multica
+    app.kubernetes.io/instance: multica
+    app.kubernetes.io/component: frontend-public
+  annotations:
+    service.beta.kubernetes.io/jdcloud-load-balancer-spec: |
+      version: "v1"
+      loadBalancerType: alb
+      listeners:
+        - protocol: "HTTP"
+        - protocol: "HTTPS"
+          certificateId: "cert26071552d09f2722cd328f"
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: multica
+    app.kubernetes.io/instance: multica
+    app.kubernetes.io/component: handoff-proxy
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+    - name: https
+      port: 443
+      targetPort: 8081

@@ -13,12 +13,16 @@ export type RuntimeConfigResult =
   | { ok: true; config: RuntimeConfig }
   | { ok: false; error: RuntimeConfigError };
 
-export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = Object.freeze({
-  schemaVersion: 1,
-  apiUrl: "https://api.multica.ai",
-  wsUrl: "wss://api.multica.ai/ws",
-  appUrl: "https://multica.ai",
-});
+declare const __MULTICA_DESKTOP_DEFAULT_API_URL__: string;
+
+const packagedDefaultApiUrl =
+  typeof __MULTICA_DESKTOP_DEFAULT_API_URL__ === "string"
+    ? __MULTICA_DESKTOP_DEFAULT_API_URL__
+    : "https://api.multica.ai";
+
+export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = Object.freeze(
+  runtimeConfigFromApiUrl(packagedDefaultApiUrl),
+);
 
 const LOCAL_DEV_RUNTIME_CONFIG: RuntimeConfig = Object.freeze({
   schemaVersion: 1,
@@ -31,6 +35,16 @@ export interface RuntimeConfigEnv {
   apiUrl?: string;
   wsUrl?: string;
   appUrl?: string;
+}
+
+export function runtimeConfigFromApiUrl(apiUrl: string): RuntimeConfig {
+  const normalizedApiUrl = normalizeHttpUrl(apiUrl, "apiUrl");
+  return {
+    schemaVersion: 1,
+    apiUrl: normalizedApiUrl,
+    wsUrl: deriveWsUrl(normalizedApiUrl),
+    appUrl: deriveAppUrl(normalizedApiUrl),
+  };
 }
 
 export function runtimeConfigFromDevEnv(env: RuntimeConfigEnv): RuntimeConfig {

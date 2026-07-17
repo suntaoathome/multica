@@ -19,6 +19,10 @@ spec:
         {{- include "multica.labels" . | nindent 8 }}
         app.kubernetes.io/component: frontend
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: frontend
           image: "{{ .Values.images.frontend.repository }}:{{ $frontendImageTag }}"
@@ -31,6 +35,71 @@ spec:
               value: "0.0.0.0"
             - name: PORT
               value: "3000"
+            {{- with .Values.frontend.config.nodeOptions }}
+            - name: NODE_OPTIONS
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.frontend.config.desktopDownloads }}
+            {{- with .version }}
+            - name: MULTICA_DESKTOP_DOWNLOAD_VERSION
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .macArm64DmgUrl }}
+            - name: MULTICA_DESKTOP_DOWNLOAD_MAC_ARM64_DMG_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .macArm64ZipUrl }}
+            - name: MULTICA_DESKTOP_DOWNLOAD_MAC_ARM64_ZIP_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .winX64ExeUrl }}
+            - name: MULTICA_DESKTOP_DOWNLOAD_WIN_X64_EXE_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .winArm64ExeUrl }}
+            - name: MULTICA_DESKTOP_DOWNLOAD_WIN_ARM64_EXE_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .linuxAmd64AppImageUrl }}
+            - name: MULTICA_DESKTOP_DOWNLOAD_LINUX_AMD64_APPIMAGE_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .linuxAmd64DebUrl }}
+            - name: MULTICA_DESKTOP_DOWNLOAD_LINUX_AMD64_DEB_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .linuxAmd64RpmUrl }}
+            - name: MULTICA_DESKTOP_DOWNLOAD_LINUX_AMD64_RPM_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .linuxArm64AppImageUrl }}
+            - name: MULTICA_DESKTOP_DOWNLOAD_LINUX_ARM64_APPIMAGE_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .linuxArm64DebUrl }}
+            - name: MULTICA_DESKTOP_DOWNLOAD_LINUX_ARM64_DEB_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .linuxArm64RpmUrl }}
+            - name: MULTICA_DESKTOP_DOWNLOAD_LINUX_ARM64_RPM_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- end }}
+          startupProbe:
+            tcpSocket:
+              port: 3000
+            failureThreshold: 30
+            periodSeconds: 2
+          readinessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
           resources:
             {{- toYaml .Values.frontend.resources | nindent 12 }}
       {{- with .Values.frontend.affinity }}

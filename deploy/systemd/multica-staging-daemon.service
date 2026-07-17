@@ -1,0 +1,20 @@
+[Unit]
+Description=Multica staging agent runtime daemon
+After=network-online.target multica-daemon.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Environment=HOME=/root
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# The staging CLI profile has independent server, token, daemon state,
+# workspaces root, and health port. Runtime credentials stay in their native
+# homes and are loaded by the interactive shell bootstrap.
+ExecStart=/bin/bash -ic 'exec /usr/local/bin/multica --profile staging daemon start --foreground --device-name openclaw.oxygent.org.cn-staging --runtime-name "OpenClaw Staging Runtime" --max-concurrent-tasks 2 --no-auto-update'
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

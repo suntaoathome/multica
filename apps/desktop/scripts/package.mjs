@@ -397,9 +397,13 @@ function main() {
   }
 
   // Step 2: derive the version that should be written into the app.
-  const version = deriveVersion();
+  const version =
+    process.env.MULTICA_DESKTOP_BUILD_VERSION?.trim() || deriveVersion();
   if (version) {
-    console.log(`[package] Desktop version → ${version} (from git describe)`);
+    const source = process.env.MULTICA_DESKTOP_BUILD_VERSION
+      ? "MULTICA_DESKTOP_BUILD_VERSION"
+      : "git describe";
+    console.log(`[package] Desktop version → ${version} (from ${source})`);
   } else {
     console.warn(
       "[package] could not derive version from git; falling back to package.json",

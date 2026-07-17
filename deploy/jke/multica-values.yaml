@@ -1,0 +1,51 @@
+# JKE deployment overrides.
+#
+# This cluster currently exposes workloads with JDCloud LoadBalancer Services
+# and has no IngressClass installed, so public entrypoints are declared as
+# JDCloud LoadBalancer Services instead of Helm Ingress resources.
+ingress:
+  enabled: false
+
+images:
+  backend:
+    repository: oxygent-cn-north-1.jcr.service.jdcloud.com/oxygent/multica-backend
+    tag: latest
+  frontend:
+    repository: oxygent-cn-north-1.jcr.service.jdcloud.com/oxygent/multica-web
+    tag: handoff-desktop-20260717
+  postgres:
+    repository: oxygent-cn-north-1.jcr.service.jdcloud.com/oxygent/pgvector
+    tag: pg17
+
+postgres:
+  persistence:
+    storageClass: default
+
+backend:
+  uploads:
+    persistence:
+      storageClass: default
+  config:
+    appEnv: production
+    appUrl: https://handoff.oxygent.org.cn
+    frontendOrigin: https://handoff.oxygent.org.cn
+    corsAllowedOrigins: https://handoff.oxygent.org.cn
+    googleRedirectUri: https://handoff.oxygent.org.cn/auth/callback
+    publicUrl: https://handoff.oxygent.org.cn
+    localUploadBaseUrl: https://handoff.oxygent.org.cn
+
+frontend:
+  replicas: 2
+  config:
+    nodeOptions: --max-old-space-size=1536
+    desktopDownloads:
+      version: v0.4.1-handoff.1
+      macArm64DmgUrl: https://github.com/suntaoathome/multica/releases/download/handoff-desktop-v0.4.1-1/multica-desktop-0.4.1-handoff.1-mac-arm64.dmg
+      macArm64ZipUrl: https://github.com/suntaoathome/multica/releases/download/handoff-desktop-v0.4.1-1/multica-desktop-0.4.1-handoff.1-mac-arm64.zip
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi

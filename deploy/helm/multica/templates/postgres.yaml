@@ -37,6 +37,10 @@ spec:
         {{- include "multica.labels" . | nindent 8 }}
         app.kubernetes.io/component: postgres
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: postgres
           image: "{{ .Values.images.postgres.repository }}:{{ .Values.images.postgres.tag }}"

@@ -185,6 +185,26 @@ describe("setupAutoUpdater", () => {
     expect(ctx.checkForUpdates).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps updater IPC stable but performs no checks for self-hosted builds", async () => {
+    setupAutoUpdater(() => null, { enabled: false });
+
+    await expect(invokeIpc("updater:get-preferences")).resolves.toEqual({
+      automaticUpdates: false,
+    });
+    await expect(
+      invokeIpc("updater:set-automatic-updates", true),
+    ).resolves.toEqual({ automaticUpdates: false });
+    await expect(invokeIpc("updater:check")).resolves.toEqual({
+      ok: true,
+      currentVersion: "0.3.17",
+      latestVersion: "0.3.17",
+      available: false,
+    });
+
+    await vi.advanceTimersByTimeAsync(60 * 60 * 1000 + 5_000);
+    expect(ctx.checkForUpdates).not.toHaveBeenCalled();
+  });
+
   it("skips startup and periodic checks when automatic updates are disabled", async () => {
     writeFileSync(
       updaterPreferencesPath(ctx.userDataPath),

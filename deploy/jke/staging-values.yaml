@@ -1,0 +1,71 @@
+# Long-lived Handoff staging environment.
+#
+# This release intentionally uses its own namespace, database, PVCs, secrets,
+# and public entrypoint. Production remains the stable control plane that
+# orchestrates and observes staging upgrades.
+ingress:
+  enabled: false
+
+existingSecret: handoff-staging-secrets
+
+imagePullSecrets:
+  - name: jcr-pull-secret
+
+images:
+  backend:
+    repository: oxygent-cn-north-1.jcr.service.jdcloud.com/oxygent/multica-backend
+    tag: handoff-staging-baseline-20260717
+  frontend:
+    repository: oxygent-cn-north-1.jcr.service.jdcloud.com/oxygent/multica-web
+    tag: handoff-desktop-20260717
+  postgres:
+    repository: oxygent-cn-north-1.jcr.service.jdcloud.com/oxygent/pgvector
+    tag: pg17
+
+postgres:
+  database: handoff_staging
+  user: handoff_staging
+  persistence:
+    size: 10Gi
+    storageClass: default
+
+backend:
+  replicas: 1
+  uploads:
+    persistence:
+      enabled: true
+      size: 5Gi
+      storageClass: default
+  config:
+    appEnv: production
+    appUrl: https://handoff-staging.oxygent.org.cn
+    frontendOrigin: https://handoff-staging.oxygent.org.cn
+    corsAllowedOrigins: https://handoff-staging.oxygent.org.cn
+    cookieDomain: ""
+    allowSignup: true
+    allowedEmails: suntao1@jd.com
+    allowedEmailDomains: ""
+    disableWorkspaceCreation: false
+    googleClientId: ""
+    googleRedirectUri: https://handoff-staging.oxygent.org.cn/auth/callback
+    publicUrl: https://handoff-staging.oxygent.org.cn
+    localUploadBaseUrl: https://handoff-staging.oxygent.org.cn
+    s3Bucket: ""
+    cloudfrontDomain: ""
+    cloudfrontKeyPairId: ""
+
+frontend:
+  replicas: 1
+  config:
+    nodeOptions: --max-old-space-size=1536
+    desktopDownloads:
+      version: v0.4.1-handoff.1
+      macArm64DmgUrl: https://github.com/suntaoathome/multica/releases/download/handoff-desktop-v0.4.1-1/multica-desktop-0.4.1-handoff.1-mac-arm64.dmg
+      macArm64ZipUrl: https://github.com/suntaoathome/multica/releases/download/handoff-desktop-v0.4.1-1/multica-desktop-0.4.1-handoff.1-mac-arm64.zip
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi

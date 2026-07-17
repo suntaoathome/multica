@@ -3,9 +3,17 @@ import { defineConfig, externalizeDepsPlugin } from "electron-vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
+const packagedDefaultApiUrl =
+  process.env.MULTICA_DESKTOP_DEFAULT_API_URL ?? "https://api.multica.ai";
+
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
+    define: {
+      __MULTICA_DESKTOP_DEFAULT_API_URL__: JSON.stringify(
+        packagedDefaultApiUrl,
+      ),
+    },
   },
   preload: {
     plugins: [externalizeDepsPlugin()],

@@ -46,9 +46,41 @@ function mockFetchWithReleases(releases: unknown[]) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 describe("fetchLatestRelease", () => {
+  it("uses self-hosted desktop assets without calling GitHub", async () => {
+    vi.stubEnv("MULTICA_DESKTOP_DOWNLOAD_VERSION", "v0.4.1-handoff.1");
+    vi.stubEnv(
+      "MULTICA_DESKTOP_DOWNLOAD_MAC_ARM64_DMG_URL",
+      "https://downloads.example.test/multica-handoff.dmg",
+    );
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchLatestRelease();
+
+    expect(result).toEqual({
+      version: "v0.4.1-handoff.1",
+      publishedAt: null,
+      htmlUrl: null,
+      assets: {
+        macArm64Dmg: "https://downloads.example.test/multica-handoff.dmg",
+        macArm64Zip: undefined,
+        winX64Exe: undefined,
+        winArm64Exe: undefined,
+        linuxAmd64AppImage: undefined,
+        linuxAmd64Deb: undefined,
+        linuxAmd64Rpm: undefined,
+        linuxArm64AppImage: undefined,
+        linuxArm64Deb: undefined,
+        linuxArm64Rpm: undefined,
+      },
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("uses previous release when latest was published within the fresh window", async () => {
     mockFetchWithReleases([
       releasePayload({

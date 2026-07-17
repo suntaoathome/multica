@@ -47,6 +47,9 @@ interface GitHubReleasePayload {
 }
 
 export async function fetchLatestRelease(): Promise<LatestRelease> {
+  const selfHostedRelease = releaseFromSelfHostedEnv();
+  if (selfHostedRelease) return selfHostedRelease;
+
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
@@ -95,6 +98,39 @@ export async function fetchLatestRelease(): Promise<LatestRelease> {
     console.warn("[download] fetchLatestRelease failed:", err);
     return emptyRelease();
   }
+}
+
+function releaseFromSelfHostedEnv(): LatestRelease | null {
+  const assets: DownloadAssets = {
+    macArm64Dmg: optionalEnv("MULTICA_DESKTOP_DOWNLOAD_MAC_ARM64_DMG_URL"),
+    macArm64Zip: optionalEnv("MULTICA_DESKTOP_DOWNLOAD_MAC_ARM64_ZIP_URL"),
+    winX64Exe: optionalEnv("MULTICA_DESKTOP_DOWNLOAD_WIN_X64_EXE_URL"),
+    winArm64Exe: optionalEnv("MULTICA_DESKTOP_DOWNLOAD_WIN_ARM64_EXE_URL"),
+    linuxAmd64AppImage: optionalEnv(
+      "MULTICA_DESKTOP_DOWNLOAD_LINUX_AMD64_APPIMAGE_URL",
+    ),
+    linuxAmd64Deb: optionalEnv("MULTICA_DESKTOP_DOWNLOAD_LINUX_AMD64_DEB_URL"),
+    linuxAmd64Rpm: optionalEnv("MULTICA_DESKTOP_DOWNLOAD_LINUX_AMD64_RPM_URL"),
+    linuxArm64AppImage: optionalEnv(
+      "MULTICA_DESKTOP_DOWNLOAD_LINUX_ARM64_APPIMAGE_URL",
+    ),
+    linuxArm64Deb: optionalEnv("MULTICA_DESKTOP_DOWNLOAD_LINUX_ARM64_DEB_URL"),
+    linuxArm64Rpm: optionalEnv("MULTICA_DESKTOP_DOWNLOAD_LINUX_ARM64_RPM_URL"),
+  };
+
+  if (!Object.values(assets).some(Boolean)) return null;
+
+  return {
+    version: optionalEnv("MULTICA_DESKTOP_DOWNLOAD_VERSION") ?? "Self-hosted",
+    publishedAt: null,
+    htmlUrl: null,
+    assets,
+  };
+}
+
+function optionalEnv(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value || undefined;
 }
 
 function isWithinFreshWindow(release: GitHubReleasePayload): boolean {
