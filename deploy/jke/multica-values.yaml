@@ -10,9 +10,11 @@ images:
   backend:
     repository: oxygent-cn-north-1.jcr.service.jdcloud.com/oxygent/multica-backend
     tag: latest
+    digest: ""
   frontend:
     repository: oxygent-cn-north-1.jcr.service.jdcloud.com/oxygent/multica-web
     tag: handoff-desktop-20260717
+    digest: ""
   postgres:
     repository: oxygent-cn-north-1.jcr.service.jdcloud.com/oxygent/pgvector
     tag: pg17

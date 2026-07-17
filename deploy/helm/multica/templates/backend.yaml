@@ -1,4 +1,8 @@
 {{- $backendImageTag := default .Chart.AppVersion .Values.images.backend.tag -}}
+{{- $backendImage := printf "%s:%s" .Values.images.backend.repository $backendImageTag -}}
+{{- with .Values.images.backend.digest }}
+{{- $backendImage = printf "%s@%s" $.Values.images.backend.repository . -}}
+{{- end }}
 {{- if .Values.backend.uploads.persistence.enabled -}}
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -62,7 +66,7 @@ spec:
       {{- end }}
       containers:
         - name: backend
-          image: "{{ .Values.images.backend.repository }}:{{ $backendImageTag }}"
+          image: {{ $backendImage | quote }}
           imagePullPolicy: {{ .Values.images.backend.pullPolicy }}
           ports:
             - containerPort: 8080

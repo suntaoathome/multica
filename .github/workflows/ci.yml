@@ -172,6 +172,18 @@ jobs:
       - name: Test
         run: cd server && go test -race ./...
 
+  deployment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Validate Helm and deployment scripts
+        run: deploy/jke/scripts/validate-deployment.sh
+
   installer:
     # Stub-driven shell tests for scripts/install.sh. Kept off the heavy
     # backend job so installer regressions surface independently, and

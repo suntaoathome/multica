@@ -7,11 +7,15 @@ images:
     # Empty defaults to Chart.appVersion. Released OCI charts set appVersion to
     # the Git tag (for example v0.3.5), so installs use matching app images.
     tag: ""
+    # Prefer digest for automated deployments. When set, it overrides tag and
+    # produces repository@sha256:... so the workload identity is immutable.
+    digest: ""
     pullPolicy: IfNotPresent
   frontend:
     repository: ghcr.io/multica-ai/multica-web
     # Empty defaults to Chart.appVersion. Set explicitly to override.
     tag: ""
+    digest: ""
     pullPolicy: IfNotPresent
   postgres:
     repository: pgvector/pgvector

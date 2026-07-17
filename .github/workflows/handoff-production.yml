@@ -1,0 +1,49 @@
+name: Handoff production promotion
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: Staging-qualified full commit SHA
+        required: true
+        type: string
+      backend_digest:
+        description: Staging-qualified backend sha256 digest
+        required: true
+        type: string
+      frontend_digest:
+        description: Staging-qualified frontend sha256 digest
+        required: true
+        type: string
+      confirm:
+        description: Type PROMOTE_HANDOFF_PRODUCTION
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: handoff-production
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    if: inputs.confirm == 'PROMOTE_HANDOFF_PRODUCTION'
+    runs-on: [self-hosted, handoff-production]
+    environment: handoff-production
+    steps:
+      - name: Validate inputs
+        env:
+          COMMIT_SHA: ${{ inputs.commit_sha }}
+          BACKEND_DIGEST: ${{ inputs.backend_digest }}
+          FRONTEND_DIGEST: ${{ inputs.frontend_digest }}
+        run: |
+          [[ "$COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$BACKEND_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+          [[ "$FRONTEND_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.commit_sha }}
+      - name: Promote exact staging digests
+        run: deploy/jke/scripts/deploy-handoff.sh production '${{ inputs.backend_digest }}' '${{ inputs.frontend_digest }}' --confirm-production

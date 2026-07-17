@@ -1,4 +1,8 @@
 {{- $frontendImageTag := default .Chart.AppVersion .Values.images.frontend.tag -}}
+{{- $frontendImage := printf "%s:%s" .Values.images.frontend.repository $frontendImageTag -}}
+{{- with .Values.images.frontend.digest }}
+{{- $frontendImage = printf "%s@%s" $.Values.images.frontend.repository . -}}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -25,7 +29,7 @@ spec:
       {{- end }}
       containers:
         - name: frontend
-          image: "{{ .Values.images.frontend.repository }}:{{ $frontendImageTag }}"
+          image: {{ $frontendImage | quote }}
           imagePullPolicy: {{ .Values.images.frontend.pullPolicy }}
           ports:
             - containerPort: 3000
