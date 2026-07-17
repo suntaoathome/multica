@@ -10,7 +10,7 @@ Environment=HOME=/root
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Use an interactive shell so the daemon inherits the local Claude/Codex
 # runtime bootstrap from /root/.bashrc without copying API keys into this unit.
-ExecStart=/bin/bash -ic 'exec /usr/local/bin/multica daemon start --foreground --device-name openclaw.oxygent.org.cn --runtime-name "OpenClaw Runtime" --max-concurrent-tasks 2 --no-auto-update'
+ExecStart=/bin/bash -ic 'exec /usr/local/bin/multica daemon start --foreground --device-name openclaw.oxygent.org.cn --runtime-name "OpenClaw Runtime" --max-concurrent-tasks 3 --no-auto-update'
 Restart=always
 RestartSec=5
 TimeoutStopSec=30
