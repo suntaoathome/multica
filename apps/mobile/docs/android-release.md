@@ -9,8 +9,9 @@
 
 The `Mobile Android Internal APK` GitHub Actions workflow creates an installable
 APK artifact and records its SHA-256, byte size, package, version, and minimum
-SDK. It uses Android's debug signing key generated on the CI runner. This APK is
-for internal installation only; it is not a formally signed Play release.
+SDK. It builds the release variant so the JavaScript bundle is embedded, then
+signs it with Android's debug key generated on the CI runner. This APK is for
+standalone internal installation only; it is not a formally signed Play release.
 
 From a clean checkout, the equivalent build is:
 
@@ -19,7 +20,7 @@ corepack enable
 pnpm install --frozen-lockfile
 pnpm -C apps/mobile android:prod:prebuild
 pnpm -C apps/mobile android:prod:internal
-adb install -r apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
 adb shell monkey -p cn.org.oxygent.handoff 1
 ```
 
@@ -42,5 +43,5 @@ and keep the upload keystore and passwords in an approved secret manager. Add a
 separate CI job that injects those secrets only at signing time and runs
 `bundleRelease`; upload the resulting AAB to the Internal testing track with
 release notes and named testers. Increment `versionCode` for every upload. The
-internal debug APK and its key must never be promoted or reused as the Play
+internal APK and its debug key must never be promoted or reused as the Play
 release signer. Production backend deployment is outside this mobile workflow.
