@@ -39,7 +39,9 @@ backend:
       size: 5Gi
       storageClass: default
   config:
-    appEnv: production
+    # Private integration-test environment. This enables the staging-only
+    # fixed verification code supplied through handoff-staging-secrets.
+    appEnv: staging
     appUrl: https://handoff-staging.oxygent.org.cn
     frontendOrigin: https://handoff-staging.oxygent.org.cn
     corsAllowedOrigins: https://handoff-staging.oxygent.org.cn
