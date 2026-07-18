@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Download } from "lucide-react";
 import { useAuthStore } from "@multica/core/auth";
 import { useLocale } from "../i18n";
 import { useDashboardCtaHref } from "../utils/use-dashboard-cta";
+import { detectOS } from "../utils/os-detect";
 import {
   ClaudeCodeLogo,
   CodexLogo,
@@ -19,6 +21,17 @@ export function LandingHero() {
   const { t } = useLocale();
   const user = useAuthStore((s) => s.user);
   const ctaHref = useDashboardCtaHref();
+  const [isAndroid, setIsAndroid] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void detectOS().then((result) => {
+      if (!cancelled) setIsAndroid(result.os === "android");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="relative min-h-full overflow-hidden bg-[#05070b] text-white">
@@ -45,11 +58,13 @@ export function LandingHero() {
                 {user ? t.header.dashboard : t.hero.cta}
               </Link>
               <Link
-                href="/download"
+                href={isAndroid ? "/download#android" : "/download"}
                 className={heroButtonClassName("ghost")}
               >
                 <Download className="size-4" aria-hidden />
-                {t.hero.downloadDesktop}
+                {isAndroid
+                  ? t.hero.downloadAndroid
+                  : t.hero.downloadDesktop}
               </Link>
               <Link
                 href="/contact-sales"

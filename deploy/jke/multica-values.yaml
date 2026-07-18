@@ -44,6 +44,11 @@ frontend:
       version: v0.4.1-handoff.1
       macArm64DmgUrl: https://github.com/suntaoathome/multica/releases/download/handoff-desktop-v0.4.1-1/multica-desktop-0.4.1-handoff.1-mac-arm64.dmg
       macArm64ZipUrl: https://github.com/suntaoathome/multica/releases/download/handoff-desktop-v0.4.1-1/multica-desktop-0.4.1-handoff.1-mac-arm64.zip
+    androidDownload:
+      version: 0.1.0
+      apkUrl: https://github.com/suntaoathome/multica/releases/download/handoff-android-v0.1.0/handoff-0.1.0-internal.apk
+      sha256: a4bc8bdf91bbcf26d5af4fa23a84961d151cc6687e00649b3784144e83aeb3eb
+      sizeBytes: "111170048"
   resources:
     requests:
       cpu: 100m

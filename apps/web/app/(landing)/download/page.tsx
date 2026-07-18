@@ -11,11 +11,11 @@ export const revalidate = 300;
 export const metadata: Metadata = {
   title: "Download Multica",
   description:
-    "Download Multica for macOS, Windows, or Linux — or install the CLI for servers and remote dev boxes.",
+    "Download Handoff for Android or Multica for macOS, Windows, and Linux — or install the CLI for servers and remote dev boxes.",
   openGraph: {
     title: "Download Multica",
     description:
-      "Get the Multica desktop app with a bundled daemon, or install the CLI for servers and remote dev boxes.",
+      "Get Handoff for Android, the Multica desktop app with a bundled daemon, or the CLI for servers and remote dev boxes.",
     url: "/download",
   },
   alternates: {

@@ -25,6 +25,7 @@ export function createJaDict(allowSignup: boolean): LandingDict {
         "Multica は、コーディングエージェントを本物のチームメンバーに変えるオープンソースプラットフォームです。タスクを割り当て、進捗を追い、ノウハウをスキルとして積み上げる。人間と AI エージェントから成るチームを、ひとつの場所で管理できます。",
       cta: "無料トライアルを始める",
       downloadDesktop: "デスクトップ版をダウンロード",
+      downloadAndroid: "Android 版をダウンロード",
       talkToSales: "営業に相談する",
       worksWith: "対応ツール",
       imageAlt: "人間と AI エージェントがイシューを管理する Multica のボード画面",
@@ -1826,6 +1827,14 @@ export function createJaDict(allowSignup: boolean): LandingDict {
     },
     download: {
       hero: {
+        android: {
+          title: "Android 版 Handoff",
+          sub: "社内テスト版 · Android 7.0 以降",
+          primary: "APK をダウンロード",
+          internalHint:
+            "デバッグ署名付きの社内テスト版です。インストール時に、この提供元を許可してください。",
+          unavailable: "Android 版は一時的に利用できません。",
+        },
         macArm64: {
           title: "macOS 版 Multica",
           sub: "Apple Silicon · デーモン同梱、設定不要",
@@ -1863,6 +1872,10 @@ export function createJaDict(allowSignup: boolean): LandingDict {
       },
       allPlatforms: {
         title: "すべてのプラットフォーム",
+        androidLabel: "Android · APK",
+        androidMinVersion: "Android 7.0 以降",
+        androidInternal: "デバッグ署名付きの社内テスト版です。",
+        sha256Label: "SHA-256",
         macArm64Label: "macOS · Apple Silicon",
         macX64Label: "macOS · Intel",
         winX64Label: "Windows · x64",
@@ -1875,6 +1888,7 @@ export function createJaDict(allowSignup: boolean): LandingDict {
         formatAppImage: ".AppImage",
         formatDeb: ".deb",
         formatRpm: ".rpm",
+        formatApk: "APK をダウンロード",
         unavailable: "利用できません",
       },
       cli: {

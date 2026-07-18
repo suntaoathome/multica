@@ -176,6 +176,11 @@ frontend:
       linuxArm64AppImageUrl: ""
       linuxArm64DebUrl: ""
       linuxArm64RpmUrl: ""
+    androidDownload:
+      version: ""
+      apkUrl: ""
+      sha256: ""
+      sizeBytes: ""
   # Compatibility shim for the prebuilt multica-web image.
   compatibility:
     # When true (default) the chart creates an ExternalName Service literally

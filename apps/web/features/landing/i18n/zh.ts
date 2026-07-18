@@ -22,6 +22,7 @@ export function createZhDict(allowSignup: boolean): LandingDict {
       "Multica \u662f\u4e00\u4e2a\u5f00\u6e90\u5e73\u53f0\uff0c\u5c06\u7f16\u7801 智能体 \u53d8\u6210\u771f\u6b63\u7684\u961f\u53cb\u3002\u5206\u914d\u4efb\u52a1\u3001\u8ddf\u8e2a\u8fdb\u5ea6\u3001\u79ef\u7d2f\u6280\u80fd\u2014\u2014\u5728\u4e00\u4e2a\u5730\u65b9\u7ba1\u7406\u4f60\u7684\u4eba\u7c7b + 智能体 \u56e2\u961f\u3002",
     cta: "免费开始",
     downloadDesktop: "下载桌面端",
+    downloadAndroid: "下载 Android 版",
     talkToSales: "联系商务",
     worksWith: "支持",
     imageAlt: "Multica \u770b\u677f\u89c6\u56fe\u2014\u2014\u4eba\u7c7b\u548c 智能体 \u534f\u540c\u7ba1\u7406\u4efb\u52a1",
@@ -2323,6 +2324,13 @@ export function createZhDict(allowSignup: boolean): LandingDict {
   },
   download: {
     hero: {
+      android: {
+        title: "Handoff Android 版",
+        sub: "内部测试版 · 支持 Android 7.0 及以上",
+        primary: "下载 APK",
+        internalHint: "这是使用调试签名的内部测试版。安装时请允许此来源安装应用。",
+        unavailable: "Android 版本暂时无法下载。",
+      },
       macArm64: {
         title: "Multica for macOS",
         sub: "Apple Silicon · 内置 daemon，无需配置",
@@ -2360,6 +2368,10 @@ export function createZhDict(allowSignup: boolean): LandingDict {
     },
     allPlatforms: {
       title: "所有平台",
+      androidLabel: "Android · APK",
+      androidMinVersion: "Android 7.0+",
+      androidInternal: "内部测试版，使用调试签名。",
+      sha256Label: "SHA-256",
       macArm64Label: "macOS · Apple Silicon",
       macX64Label: "macOS · Intel",
       winX64Label: "Windows · x64",
@@ -2372,6 +2384,7 @@ export function createZhDict(allowSignup: boolean): LandingDict {
       formatAppImage: ".AppImage",
       formatDeb: ".deb",
       formatRpm: ".rpm",
+      formatApk: "下载 APK",
       unavailable: "暂不可用",
     },
     cli: {

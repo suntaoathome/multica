@@ -22,6 +22,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
       "Multica is an open-source platform that turns coding agents into real teammates. Assign tasks, track progress, compound skills \u2014 manage your human + agent workforce in one place.",
     cta: "Start free trial",
     downloadDesktop: "Download Desktop",
+    downloadAndroid: "Download Android",
     talkToSales: "Talk to sales",
     worksWith: "Works with",
     imageAlt: "Multica board view \u2014 issues managed by humans and agents",
@@ -2324,6 +2325,14 @@ export function createEnDict(allowSignup: boolean): LandingDict {
   },
   download: {
     hero: {
+      android: {
+        title: "Handoff for Android",
+        sub: "Internal test build · Android 7.0 or later",
+        primary: "Download APK",
+        internalHint:
+          "Internal debug-signed build. Android may ask you to allow installation from this source.",
+        unavailable: "The Android build is temporarily unavailable.",
+      },
       macArm64: {
         title: "Multica for macOS",
         sub: "Apple Silicon · bundled daemon, zero setup",
@@ -2361,6 +2370,10 @@ export function createEnDict(allowSignup: boolean): LandingDict {
     },
     allPlatforms: {
       title: "All platforms",
+      androidLabel: "Android · APK",
+      androidMinVersion: "Android 7.0+",
+      androidInternal: "Internal test build with a debug signature.",
+      sha256Label: "SHA-256",
       macArm64Label: "macOS · Apple Silicon",
       macX64Label: "macOS · Intel",
       winX64Label: "Windows · x64",
@@ -2373,6 +2386,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
       formatAppImage: ".AppImage",
       formatDeb: ".deb",
       formatRpm: ".rpm",
+      formatApk: "Download APK",
       unavailable: "Not available",
     },
     cli: {

@@ -89,6 +89,24 @@ spec:
               value: {{ . | quote }}
             {{- end }}
             {{- end }}
+            {{- with .Values.frontend.config.androidDownload }}
+            {{- with .version }}
+            - name: MULTICA_ANDROID_DOWNLOAD_VERSION
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .apkUrl }}
+            - name: MULTICA_ANDROID_DOWNLOAD_APK_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .sha256 }}
+            - name: MULTICA_ANDROID_DOWNLOAD_SHA256
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .sizeBytes }}
+            - name: MULTICA_ANDROID_DOWNLOAD_SIZE_BYTES
+              value: {{ . | quote }}
+            {{- end }}
+            {{- end }}
           startupProbe:
             tcpSocket:
               port: 3000

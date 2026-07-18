@@ -28,6 +28,14 @@ export interface LatestRelease {
   publishedAt: string | null;
   htmlUrl: string | null;
   assets: DownloadAssets;
+  android?: AndroidDownload;
+}
+
+export interface AndroidDownload {
+  version?: string;
+  apkUrl: string;
+  sha256?: string;
+  sizeBytes?: number;
 }
 
 const GITHUB_RELEASES_URL =
@@ -47,8 +55,11 @@ interface GitHubReleasePayload {
 }
 
 export async function fetchLatestRelease(): Promise<LatestRelease> {
+  const android = androidDownloadFromEnv();
   const selfHostedRelease = releaseFromSelfHostedEnv();
-  if (selfHostedRelease) return selfHostedRelease;
+  if (selfHostedRelease) {
+    return android ? { ...selfHostedRelease, android } : selfHostedRelease;
+  }
 
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
@@ -82,22 +93,41 @@ export async function fetchLatestRelease(): Promise<LatestRelease> {
     const stable = data.filter((r) => !r.prerelease && !r.draft);
     const latest = stable[0];
     if (!latest) {
-      return emptyRelease();
+      return emptyRelease(android);
     }
     const previous = stable[1];
     const chosen =
       previous && isWithinFreshWindow(latest) ? previous : latest;
 
-    return {
+    const release: LatestRelease = {
       version: chosen.tag_name ?? null,
       publishedAt: chosen.published_at ?? null,
       htmlUrl: chosen.html_url ?? null,
       assets: parseReleaseAssets(chosen.assets ?? []),
     };
+    return android ? { ...release, android } : release;
   } catch (err) {
     console.warn("[download] fetchLatestRelease failed:", err);
-    return emptyRelease();
+    return emptyRelease(android);
   }
+}
+
+function androidDownloadFromEnv(): AndroidDownload | undefined {
+  const apkUrl = optionalEnv("MULTICA_ANDROID_DOWNLOAD_APK_URL");
+  if (!apkUrl) return undefined;
+
+  const size = optionalEnv("MULTICA_ANDROID_DOWNLOAD_SIZE_BYTES");
+  const sizeBytes = size && /^\d+$/.test(size) ? Number(size) : undefined;
+
+  return {
+    version: optionalEnv("MULTICA_ANDROID_DOWNLOAD_VERSION"),
+    apkUrl,
+    sha256: optionalEnv("MULTICA_ANDROID_DOWNLOAD_SHA256"),
+    sizeBytes:
+      sizeBytes && Number.isSafeInteger(sizeBytes) && sizeBytes > 0
+        ? sizeBytes
+        : undefined,
+  };
 }
 
 function releaseFromSelfHostedEnv(): LatestRelease | null {
@@ -140,11 +170,12 @@ function isWithinFreshWindow(release: GitHubReleasePayload): boolean {
   return Date.now() - publishedAt < FRESH_RELEASE_WINDOW_MS;
 }
 
-function emptyRelease(): LatestRelease {
-  return {
+function emptyRelease(android?: AndroidDownload): LatestRelease {
+  const release: LatestRelease = {
     version: null,
     publishedAt: null,
     htmlUrl: null,
     assets: {},
   };
+  return android ? { ...release, android } : release;
 }
