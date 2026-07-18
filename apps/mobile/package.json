@@ -18,6 +18,8 @@
     "android": "expo run:android",
     "android:staging": "dotenv -e .env.staging -- cross-env APP_ENV=staging expo run:android",
     "android:prod": "dotenv -e .env.production -- cross-env APP_ENV=production expo run:android",
+    "android:prod:prebuild": "dotenv -e .env.production -- cross-env APP_ENV=production expo prebuild --platform android --clean --no-install",
+    "android:prod:internal": "dotenv -e .env.production -- cross-env APP_ENV=production ./android/gradlew -p android assembleDebug",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
