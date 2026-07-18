@@ -25,6 +25,7 @@ export function createKoDict(allowSignup: boolean): LandingDict {
         "Multica는 코딩 AI 에이전트를 진짜 팀원으로 만들어 주는 오픈소스 플랫폼입니다. 이슈를 맡기고, 진행 상황을 따라가고, 반복되는 노하우를 스킬로 쌓아 두세요. 사람과 AI 에이전트로 이루어진 팀을 한곳에서 관리할 수 있습니다.",
       cta: "무료로 시작하기",
       downloadDesktop: "데스크톱 다운로드",
+      downloadAndroid: "Android 다운로드",
       talkToSales: "영업팀에 문의",
       worksWith: "지원 도구",
       imageAlt: "사람과 AI 에이전트가 함께 이슈를 관리하는 Multica 보드 화면",
@@ -1851,6 +1852,14 @@ export function createKoDict(allowSignup: boolean): LandingDict {
     },
     download: {
       hero: {
+        android: {
+          title: "Android용 Handoff",
+          sub: "내부 테스트 빌드 · Android 7.0 이상",
+          primary: "APK 다운로드",
+          internalHint:
+            "디버그 서명된 내부 테스트 빌드입니다. 설치할 때 이 출처의 앱 설치를 허용하세요.",
+          unavailable: "Android 빌드를 일시적으로 사용할 수 없습니다.",
+        },
         macArm64: {
           title: "macOS용 Multica",
           sub: "Apple Silicon · 데몬 포함, 별도 설정 없음",
@@ -1888,6 +1897,10 @@ export function createKoDict(allowSignup: boolean): LandingDict {
       },
       allPlatforms: {
         title: "모든 플랫폼",
+        androidLabel: "Android · APK",
+        androidMinVersion: "Android 7.0+",
+        androidInternal: "디버그 서명된 내부 테스트 빌드입니다.",
+        sha256Label: "SHA-256",
         macArm64Label: "macOS · Apple Silicon",
         macX64Label: "macOS · Intel",
         winX64Label: "Windows · x64",
@@ -1900,6 +1913,7 @@ export function createKoDict(allowSignup: boolean): LandingDict {
         formatAppImage: ".AppImage",
         formatDeb: ".deb",
         formatRpm: ".rpm",
+        formatApk: "APK 다운로드",
         unavailable: "사용할 수 없음",
       },
       cli: {

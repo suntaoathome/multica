@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { useLocale } from "../../i18n";
+import type { AndroidDownload } from "../../utils/github-release";
 import type { DownloadAssets } from "../../utils/parse-release-assets";
-import { AppleIcon, LinuxIcon, WindowsIcon } from "./os-icons";
+import { AndroidIcon, AppleIcon, LinuxIcon, WindowsIcon } from "./os-icons";
 
 interface Props {
   assets: DownloadAssets;
+  android?: AndroidDownload;
   /** Link to GitHub releases page, used when individual asset URLs
    *  couldn't be resolved (API down / parse failure). */
   fallbackHref: string;
@@ -17,6 +19,7 @@ interface Props {
  */
 export function AllPlatforms({
   assets,
+  android,
   fallbackHref,
 }: Props) {
   const { t } = useLocale();
@@ -33,6 +36,19 @@ export function AllPlatforms({
         </h2>
 
         <div className="mt-10 overflow-hidden rounded-2xl border border-[#0a0d12]/10">
+          <Row
+            id="android"
+            icon={<AndroidIcon className="text-[#0a0d12]" />}
+            label={d.androidLabel}
+            description={androidDescription(android, d.androidMinVersion)}
+            formats={[
+              {
+                label: d.formatApk,
+                href: android?.apkUrl,
+              },
+            ]}
+            unavailable={d.unavailable}
+          />
           <Row
             icon={<AppleIcon className="text-[#0a0d12]" />}
             label={d.macArm64Label}
@@ -126,6 +142,20 @@ export function AllPlatforms({
           />
         </div>
 
+        {android ? (
+          <div className="mt-5 space-y-2 text-[12px] leading-5 text-[#0a0d12]/60">
+            <p>{d.androidInternal}</p>
+            {android.sha256 ? (
+              <p className="break-all">
+                <span className="font-medium text-[#0a0d12]/75">
+                  {d.sha256Label}:{" "}
+                </span>
+                <code>{android.sha256}</code>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         {isFallbackNeeded(assets) ? (
           <p className="mt-6 text-[13px] text-[#0a0d12]/60">
             <Link
@@ -148,8 +178,10 @@ export function AllPlatforms({
 // ------------------------------------------------------------
 
 interface RowProps {
+  id?: string;
   icon: React.ReactNode;
   label: string;
+  description?: string;
   formats: {
     label: string;
     href: string | undefined;
@@ -158,16 +190,32 @@ interface RowProps {
   isLast?: boolean;
 }
 
-function Row({ icon, label, formats, unavailable, isLast }: RowProps) {
+function Row({
+  id,
+  icon,
+  label,
+  description,
+  formats,
+  unavailable,
+  isLast,
+}: RowProps) {
   return (
     <div
+      id={id}
       className={`flex flex-wrap items-center gap-x-6 gap-y-3 px-6 py-5 ${isLast ? "" : "border-b border-[#0a0d12]/8"}`}
     >
       <div className="flex min-w-[220px] items-center gap-3">
         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0a0d12]/5">
           {icon}
         </span>
-        <span className="text-[14.5px] font-medium">{label}</span>
+        <span>
+          <span className="block text-[14.5px] font-medium">{label}</span>
+          {description ? (
+            <span className="mt-0.5 block text-[12px] text-[#0a0d12]/55">
+              {description}
+            </span>
+          ) : null}
+        </span>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {formats.map((f) =>
@@ -193,6 +241,22 @@ function Row({ icon, label, formats, unavailable, isLast }: RowProps) {
       </div>
     </div>
   );
+}
+
+function androidDescription(
+  android: AndroidDownload | undefined,
+  minimumVersion: string,
+): string {
+  const details = [
+    android?.version ? `v${android.version.replace(/^v/, "")}` : undefined,
+    android?.sizeBytes ? formatFileSize(android.sizeBytes) : undefined,
+    minimumVersion,
+  ];
+  return details.filter(Boolean).join(" · ");
+}
+
+function formatFileSize(sizeBytes: number): string {
+  return `${Math.round(sizeBytes / 1024 / 1024)} MB`;
 }
 
 // Twelve desktop artifacts are expected per release (four Mac,

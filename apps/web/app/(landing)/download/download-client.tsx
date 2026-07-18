@@ -48,12 +48,14 @@ export function DownloadClient({ release }: { release: LatestRelease }) {
         <DownloadHero
           detected={detected}
           assets={release.assets}
+          android={release.android}
           versionUnavailable={versionUnavailable}
         />
       </div>
 
       <AllPlatforms
         assets={release.assets}
+        android={release.android}
         fallbackHref={ALL_RELEASES_URL}
       />
       <CliSection />

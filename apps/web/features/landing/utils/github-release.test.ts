@@ -50,6 +50,30 @@ afterEach(() => {
 });
 
 describe("fetchLatestRelease", () => {
+  it("adds a configured Android APK to a self-hosted release", async () => {
+    vi.stubEnv("MULTICA_DESKTOP_DOWNLOAD_VERSION", "v0.4.1-handoff.1");
+    vi.stubEnv(
+      "MULTICA_DESKTOP_DOWNLOAD_MAC_ARM64_DMG_URL",
+      "https://downloads.example.test/multica-handoff.dmg",
+    );
+    vi.stubEnv("MULTICA_ANDROID_DOWNLOAD_VERSION", "0.1.0");
+    vi.stubEnv(
+      "MULTICA_ANDROID_DOWNLOAD_APK_URL",
+      "https://downloads.example.test/handoff.apk",
+    );
+    vi.stubEnv("MULTICA_ANDROID_DOWNLOAD_SHA256", "abc123");
+    vi.stubEnv("MULTICA_ANDROID_DOWNLOAD_SIZE_BYTES", "111170048");
+
+    const result = await fetchLatestRelease();
+
+    expect(result.android).toEqual({
+      version: "0.1.0",
+      apkUrl: "https://downloads.example.test/handoff.apk",
+      sha256: "abc123",
+      sizeBytes: 111_170_048,
+    });
+  });
+
   it("uses self-hosted desktop assets without calling GitHub", async () => {
     vi.stubEnv("MULTICA_DESKTOP_DOWNLOAD_VERSION", "v0.4.1-handoff.1");
     vi.stubEnv(
