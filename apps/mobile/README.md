@@ -1,6 +1,9 @@
-# Multica Mobile (iOS and Android)
+# Handoff Mobile (iOS and Android)
 
-Expo + React Native iOS client for Multica. Independent from web/desktop — shares only types from `@multica/core/`. See [`CLAUDE.md`](./CLAUDE.md) for the locked tech-stack baseline and import rules.
+Expo + React Native client for Handoff. Independent from web/desktop — shares only types from `@multica/core/`. See [`CLAUDE.md`](./CLAUDE.md) for the locked tech-stack baseline and import rules.
+
+For the reproducible Android internal APK, checksums, signing boundary, and
+Google Play plan, see [`docs/android-release.md`](./docs/android-release.md).
 
 ## Just want to use it on your phone? (no development)
 

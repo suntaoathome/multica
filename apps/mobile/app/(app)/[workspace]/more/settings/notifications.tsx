@@ -19,6 +19,10 @@ import { Separator } from "@/components/ui/separator";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { notificationPreferenceOptions } from "@/data/queries/notification-preferences";
 import { useUpdateNotificationPreferences } from "@/data/mutations/notification-preferences";
+import { APP_NAME } from "@/lib/brand";
+
+const SYSTEM_DESCRIPTION =
+  `${APP_NAME}-wide announcements and important account events.`;
 
 const INBOX_GROUPS: Array<{
   key: Exclude<NotificationGroupKey, "system_notifications">;
@@ -128,7 +132,7 @@ export default function NotificationsSettingsScreen() {
 
       <Section
         title="System"
-        description="Multica-wide announcements and important account events."
+        description={SYSTEM_DESCRIPTION}
       >
         <View className="flex-row items-center px-4 py-3 gap-3">
           <View className="flex-1">

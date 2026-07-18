@@ -4,6 +4,8 @@
  * we map the known shapes to friendlier copy and fall back to the caller's
  * default for anything unrecognised.
  */
+import { APP_NAME } from "@/lib/brand";
+
 export function mapAuthError(err: unknown, fallback: string): string {
   if (!(err instanceof Error)) return fallback;
   const msg = err.message.toLowerCase();
@@ -17,7 +19,7 @@ export function mapAuthError(err: unknown, fallback: string): string {
     return "Too many attempts. Wait a moment and try again.";
   }
   if (/network|fetch|timeout|unreachable/.test(msg)) {
-    return "Can't reach Multica. Check your connection and retry.";
+    return `Can't reach ${APP_NAME}. Check your connection and retry.`;
   }
   return fallback;
 }

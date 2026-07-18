@@ -20,6 +20,7 @@
 import { View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
+import { APP_NAME } from "@/lib/brand";
 
 const STARTER_PROMPTS: { icon: string; text: string }[] = [
   { icon: "📋", text: "List my open issues by priority" },
@@ -61,7 +62,9 @@ export function ChatEmptyState({ hasSessions, agentName, onPickPrompt }: Props) 
   }
 
   // Returning user: starter prompts are the fastest path back to action.
-  const title = agentName ? `Hi, I'm ${agentName}` : "Welcome back to Multica";
+  const title = agentName
+    ? `Hi, I'm ${agentName}`
+    : `Welcome back to ${APP_NAME}`;
   return (
     <View className="flex-1 items-center justify-center px-6 py-8 gap-5">
       <View className="items-center gap-1">

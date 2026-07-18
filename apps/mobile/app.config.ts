@@ -17,10 +17,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   return {
     ...config,
     name: isProd
-      ? "Multica"
+      ? "Handoff"
       : isStaging
-        ? "Multica (Staging)"
-        : "Multica (Dev)",
+        ? "Handoff (Staging)"
+        : "Handoff (Dev)",
     slug: "multica-mobile",
     version: "0.1.0",
     orientation: "portrait",
@@ -49,7 +49,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     android: {
       package: isProd
-        ? "ai.multica.mobile"
+        ? "cn.org.oxygent.handoff"
         : isStaging
           ? "ai.multica.mobile.staging"
           : "ai.multica.mobile.dev",
@@ -71,15 +71,18 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           // Native usage descriptions for the existing image-library and
           // profile-camera flows. Audio recording remains disabled.
           photosPermission:
-            "Allow Multica to access your photos to attach images to issues and comments.",
+            "Allow Handoff to access your photos to attach images to issues and comments.",
           cameraPermission:
-            "Allow Multica to use your camera to take a profile photo.",
+            "Allow Handoff to use your camera to take a profile photo.",
           microphonePermission: false,
         },
       ],
       [
         "expo-build-properties",
         {
+          android: {
+            minSdkVersion: 24,
+          },
           ios: {
             buildReactNativeFromSource: true,
           },
