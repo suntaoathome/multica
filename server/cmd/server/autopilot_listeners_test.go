@@ -127,10 +127,11 @@ func TestAutopilotRunOnlyTaskTerminalEventsUpdateRun(t *testing.T) {
 // issue_created with exactly one issue task that carries no autopilot_run_id
 // (so it must be reached via the issue_id lookup, not SyncRunFromTask).
 type linkedIssueAutopilotFixture struct {
-	taskSvc *service.TaskService
-	queries *db.Queries
-	run     *db.AutopilotRun
-	taskID  pgtype.UUID
+	taskSvc      *service.TaskService
+	autopilotSvc *service.AutopilotService
+	queries      *db.Queries
+	run          *db.AutopilotRun
+	taskID       pgtype.UUID
 }
 
 // dispatchCreateIssueAutopilot creates an active create_issue autopilot,
@@ -199,7 +200,31 @@ func dispatchCreateIssueAutopilot(t *testing.T, title string) linkedIssueAutopil
 		t.Fatalf("expected pre-failure run status issue_created, got %q", run.Status)
 	}
 
-	return linkedIssueAutopilotFixture{taskSvc: taskSvc, queries: queries, run: run, taskID: tasks[0].ID}
+	return linkedIssueAutopilotFixture{taskSvc: taskSvc, autopilotSvc: autopilotSvc, queries: queries, run: run, taskID: tasks[0].ID}
+}
+
+func TestAutopilotBlockedIssueWaitsForPendingResolver(t *testing.T) {
+	ctx := context.Background()
+	f := dispatchCreateIssueAutopilot(t, "Create-issue recoverable blocker")
+	if _, err := testPool.Exec(ctx, `
+		UPDATE issue SET status = 'blocked',
+			metadata = jsonb_set(metadata, '{blocker_resolution_state}', '"resolver_pending"'::jsonb)
+		WHERE id = $1
+	`, f.run.IssueID); err != nil {
+		t.Fatalf("mark issue resolver-pending: %v", err)
+	}
+	issue, err := f.queries.GetIssue(ctx, f.run.IssueID)
+	if err != nil {
+		t.Fatalf("GetIssue: %v", err)
+	}
+	f.autopilotSvc.SyncRunFromIssue(ctx, issue)
+	updated, err := f.queries.GetAutopilotRun(ctx, f.run.ID)
+	if err != nil {
+		t.Fatalf("GetAutopilotRun: %v", err)
+	}
+	if updated.Status != "issue_created" {
+		t.Fatalf("pending resolver must keep run issue_created, got %q", updated.Status)
+	}
 }
 
 // runTaskWithBudget marks the issue task dispatched with the given attempt

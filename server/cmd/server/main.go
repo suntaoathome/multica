@@ -373,6 +373,7 @@ func main() {
 	taskSvc.Analytics = analyticsClient
 	taskSvc.Metrics = businessMetrics
 	autopilotSvc := service.NewAutopilotService(queries, pool, bus, taskSvc)
+	registerBlockerResolutionListeners(bus, queries, taskSvc)
 	registerAutopilotListeners(bus, autopilotSvc)
 
 	// Construct a LivenessStore that mirrors the one wired into the HTTP

@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/multica-ai/multica/server/internal/analytics"
 	"github.com/multica-ai/multica/server/internal/attribution"
+	"github.com/multica-ai/multica/server/internal/blocker"
 	"github.com/multica-ai/multica/server/internal/dispatch"
 	"github.com/multica-ai/multica/server/internal/events"
 	"github.com/multica-ai/multica/server/internal/issueguard"
@@ -983,7 +984,15 @@ func (s *AutopilotService) SyncRunFromIssue(ctx context.Context, issue db.Issue)
 		}
 		s.captureAutopilotRunCompleted(autopilot, updatedRun)
 		s.publishRunDone(wsID, updatedRun, "completed")
-	case "cancelled", "blocked":
+	case "blocked":
+		// A blocked issue with an active resolver is waiting on an internal
+		// recovery hop, not terminal. The resolver will either resume the issue
+		// or mark the resolution terminal before leaving it blocked.
+		if blocker.IsResolutionPending(issue.Metadata) {
+			return
+		}
+		fallthrough
+	case "cancelled":
 		reason := "issue " + issue.Status
 		updatedRun, err := s.Queries.UpdateAutopilotRunFailed(ctx, db.UpdateAutopilotRunFailedParams{
 			ID:            run.ID,

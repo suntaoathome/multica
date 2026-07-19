@@ -309,7 +309,8 @@ func TestAssignmentTriggeredProtocolHonorsAgentIdentity(t *testing.T) {
 		"Complete the task within your Agent Identity boundaries.",
 		"Do not investigate, implement, create issues, update issues, or delegate if your Agent Identity forbids that action",
 		"When done, run `multica issue status " + issueID + " in_review` unless your Agent Identity forbids issue status changes; if it does, skip this step.",
-		"If blocked, run `multica issue status " + issueID + " blocked` unless your Agent Identity forbids issue status changes.",
+		"first exhaust safe self-recovery within your Agent Identity",
+		"multica issue status " + issueID + " blocked",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("assignment-triggered brief missing identity-bound workflow text %q\n---\n%s", want, out)
@@ -324,6 +325,35 @@ func TestAssignmentTriggeredProtocolHonorsAgentIdentity(t *testing.T) {
 		if strings.Contains(out, banned) {
 			t.Errorf("assignment-triggered brief still contains unconditional legacy workflow text %q\n---\n%s", banned, out)
 		}
+	}
+}
+
+func TestBlockerResolverWorkflowDoesNotResumeOnEntry(t *testing.T) {
+	t.Parallel()
+	const issueID = "77777777-8888-9999-aaaa-bbbbbbbbbbbb"
+	out := buildMetaSkillContent("codex", TaskContextForEnv{
+		IssueID:       issueID,
+		HandoffNote:   "multica:blocker-resolver:v1\nResolve the reported blocker.",
+		IsSquadLeader: true,
+	})
+
+	for _, want := range []string{
+		"automatic blocker resolver",
+		"keep its status `blocked` until the blocker is actually removed",
+		"--key blocker_resolution_state --value resolved",
+		"multica issue status " + issueID + " in_progress",
+		"automatically resumes the original assignee",
+		"--key blocker_resolution_state --value terminal",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("resolver brief missing %q\n---\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "4. Run `multica issue status "+issueID+" in_progress`") {
+		t.Fatalf("resolver must not resume the issue on entry\n---\n%s", out)
+	}
+	if strings.Contains(out, "When done, run `multica issue status "+issueID+" in_review`") {
+		t.Fatalf("resolver must not move the worker's issue to review\n---\n%s", out)
 	}
 }
 

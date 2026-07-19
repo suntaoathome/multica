@@ -134,6 +134,24 @@ never cancels tasks now. `CancelTasksForIssue` fires only from the issue-deletio
 paths (`DeleteIssue` / `BatchDeleteIssues`), where the owning issue row is going
 away, so no task is left orphaned.
 
+## Recoverable blocker routing
+
+| Behavior | File:line |
+|---|---|
+| Agent-reported `blocked` routes to the one active squad leader and records resolver metadata | `server/cmd/server/blocker_resolution_listeners.go:22` |
+| Internal resolver handoff marker and pending-state parser | `server/internal/blocker/blocker.go:27,40` |
+| Resolver-specific workflow keeps the issue blocked until resolution | `server/internal/daemon/execenv/runtime_config_sections.go:436` |
+| `blocked → in_progress` selects the `resume` trigger and wakes the original assignee | `server/internal/service/issue_trigger.go:114-122` |
+| A pending resolver prevents autopilot from treating `blocked` as terminal | `server/internal/service/autopilot.go:987-993` |
+
+Automatic escalation is deliberately conservative: the status change must be
+made by the currently assigned agent, and that agent must belong to exactly one
+active squad whose leader is a different agent. The issue stays assigned to the
+worker. The leader resolves the blocker, records `resolved`, and moves the issue
+to `in_progress`; the normal issue trigger then enqueues the original worker.
+Multiple/no squads and leader self-loops remain visible blockers instead of
+being routed nondeterministically.
+
 ## Sub-issue stages (barrier wake)
 
 | Behavior | File:line |

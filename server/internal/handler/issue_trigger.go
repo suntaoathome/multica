@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/multica-ai/multica/server/internal/blocker"
 	"github.com/multica-ai/multica/server/internal/service"
 	"github.com/multica-ai/multica/server/internal/util"
 	agentver "github.com/multica-ai/multica/server/pkg/agent"
@@ -21,10 +22,13 @@ const maxPreviewTriggerIssues = 500
 // boundary (validateAssigneePair on assign) and inside enqueueSquadLeaderTask
 // (canEnqueueSquadLeader), so a write must NOT re-run or sink it — it passes
 // allow-all. The self-loop check needs the request's X-Task-ID header.
-func (h *Handler) issueTriggerWriteProbe(r *http.Request, actorType string, issue db.Issue) service.IssueTriggerProbe {
+func (h *Handler) issueTriggerWriteProbe(r *http.Request, actorType, actorID string, issue db.Issue) service.IssueTriggerProbe {
 	return service.IssueTriggerProbe{
 		CanAccessAgent: nil, // allow-all; gate lives at the write boundary
 		IsSelfLoop: func() bool {
+			if isCrossAgentBlockerResolution(issue, actorType, actorID) {
+				return false
+			}
 			return h.isAgentRunningOnIssue(r, actorType, issue)
 		},
 	}
@@ -41,9 +45,18 @@ func (h *Handler) issueTriggerPreviewProbe(r *http.Request, actorType, actorID, 
 			return h.canInvokeAgent(r.Context(), agent, actorType, actorID, originatorUserID, workspaceID)
 		},
 		IsSelfLoop: func() bool {
+			if isCrossAgentBlockerResolution(issue, actorType, actorID) {
+				return false
+			}
 			return h.isAgentRunningOnIssue(r, actorType, issue)
 		},
 	}
+}
+
+func isCrossAgentBlockerResolution(issue db.Issue, actorType, actorID string) bool {
+	return actorType == "agent" && issue.AssigneeType.Valid && issue.AssigneeType.String == "agent" &&
+		issue.AssigneeID.Valid && uuidToString(issue.AssigneeID) != actorID &&
+		blocker.IsResolvedBy(issue.Metadata, actorID)
 }
 
 // dispatchIssueRun executes the enqueue side effect for a decision produced by

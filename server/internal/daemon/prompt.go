@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/multica-ai/multica/server/internal/blocker"
 	"github.com/multica-ai/multica/server/internal/daemon/execenv"
 )
 
@@ -30,6 +31,9 @@ func BuildPrompt(task Task, provider string) string {
 	var b strings.Builder
 	b.WriteString("You are running as a local coding agent for a Multica workspace.\n\n")
 	fmt.Fprintf(&b, "Your assigned issue ID is: %s\n\n", task.IssueID)
+	if blocker.IsResolverHandoff(task.HandoffNote) {
+		b.WriteString("This is an automatic blocker-resolution run. Keep the issue blocked while you repair the reported blocker; only move it to in_progress after the blocker is actually removed so the original assignee can resume. Follow the dedicated resolver workflow in your runtime instructions.\n\n")
+	}
 	// Assignment handoff (MUL-3375): a free-text instruction the person who
 	// assigned/promoted this issue left for you. Frame it as a handoff, not a
 	// comment to reply to — there is no comment thread to answer here.
