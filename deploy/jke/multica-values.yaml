@@ -47,8 +47,8 @@ frontend:
     androidDownload:
       version: 0.1.0
       apkUrl: https://github.com/suntaoathome/multica/releases/download/handoff-android-v0.1.0/handoff-0.1.0-internal.apk
-      sha256: a4bc8bdf91bbcf26d5af4fa23a84961d151cc6687e00649b3784144e83aeb3eb
-      sizeBytes: "111170048"
+      sha256: 6cddf96d94ea04349b0239aaade508dec65ae62aae6c94a6628e78b5295ba67b
+      sizeBytes: "116800439"
   resources:
     requests:
       cpu: 100m
