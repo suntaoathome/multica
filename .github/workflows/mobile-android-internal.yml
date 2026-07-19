@@ -58,9 +58,26 @@ jobs:
             adb install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
             adb shell monkey -p cn.org.oxygent.handoff 1
             sleep 10
-            adb shell screencap -p /sdcard/handoff-login.png
-            adb pull /sdcard/handoff-login.png artifact/handoff-login.png
-            adb logcat -d > artifact/emulator-logcat.txt
+            APP_PID=$(adb shell pidof cn.org.oxygent.handoff | tr -d '\r')
+            test -n "$APP_PID"
+            printf '%s\n' "$APP_PID" > artifact/app-pid.txt
+
+            SCREENSHOT_OK=0
+            for ATTEMPT in 1 2 3 4 5; do
+              if adb wait-for-device && adb exec-out screencap -p > artifact/handoff-login.png.tmp && test -s artifact/handoff-login.png.tmp; then
+                mv artifact/handoff-login.png.tmp artifact/handoff-login.png
+                SCREENSHOT_OK=1
+                break
+              fi
+              rm -f artifact/handoff-login.png.tmp
+              echo "::warning::Screenshot attempt $ATTEMPT failed; retrying"
+              sleep 5
+            done
+            if [ "$SCREENSHOT_OK" -ne 1 ]; then
+              echo "::warning::APK installation and app launch succeeded, but the emulator screenshot was unavailable"
+            fi
+
+            adb logcat -d > artifact/emulator-logcat.txt || echo "::warning::Unable to collect emulator logcat"
       - uses: actions/upload-artifact@v6
         with:
           name: handoff-android-0.1.0-internal
