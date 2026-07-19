@@ -7,7 +7,31 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5/pgtype"
+	db "github.com/multica-ai/multica/server/pkg/db/generated"
 )
+
+func TestCrossAgentBlockerResolutionBypassesOnlyRecordedResolver(t *testing.T) {
+	workerID := parseUUID("11111111-1111-4111-8111-111111111111")
+	issue := db.Issue{
+		AssigneeType: pgtype.Text{String: "agent", Valid: true},
+		AssigneeID:   workerID,
+		Metadata:     []byte(`{"blocker_resolution_state":"resolved","blocker_resolver_agent_id":"leader-1"}`),
+	}
+	if !isCrossAgentBlockerResolution(issue, "agent", "leader-1") {
+		t.Fatal("recorded cross-agent resolver should bypass the same-issue self-loop guard")
+	}
+	if isCrossAgentBlockerResolution(issue, "agent", "other-agent") {
+		t.Fatal("unrelated agent must not bypass the self-loop guard")
+	}
+	if isCrossAgentBlockerResolution(issue, "agent", uuidToString(workerID)) {
+		t.Fatal("original assignee must remain protected from a same-issue self-loop")
+	}
+	if isCrossAgentBlockerResolution(issue, "member", "leader-1") {
+		t.Fatal("member updates do not need an agent self-loop exception")
+	}
+}
 
 // seededReadyAgentID returns a workspace agent that has a runtime bound (the
 // fixture's first agent), so WillEnqueueRun treats it as ready.
@@ -135,6 +159,41 @@ func TestPreviewIssueTrigger_BatchAggregates(t *testing.T) {
 	}
 	if !seen[i1.ID] || !seen[i2.ID] {
 		t.Fatalf("batch promote: missing an issue in %+v", resp.Triggers)
+	}
+}
+
+func TestBlockedIssueResumePreviewsAndEnqueuesOriginalAssignee(t *testing.T) {
+	agentID := seededReadyAgentID(t)
+	issue := createIssueForTest(t, map[string]any{
+		"title": "resume after blocker resolution", "status": "backlog",
+		"assignee_type": "agent", "assignee_id": agentID,
+	})
+	if _, err := testPool.Exec(context.Background(), `UPDATE issue SET status = 'blocked' WHERE id = $1`, issue.ID); err != nil {
+		t.Fatalf("seed blocked issue: %v", err)
+	}
+
+	preview := previewIssueTrigger(t, map[string]any{
+		"issue_ids": []string{issue.ID},
+		"status":    "in_progress",
+	})
+	if preview.TotalCount != 1 || len(preview.Triggers) != 1 {
+		t.Fatalf("blocked resume: expected one trigger, got %+v", preview)
+	}
+	if preview.Triggers[0].AgentID != agentID || preview.Triggers[0].Source != "resume" {
+		t.Fatalf("blocked resume: wrong trigger %+v", preview.Triggers[0])
+	}
+
+	w := httptest.NewRecorder()
+	req := withURLParam(newRequest("PUT", "/api/issues/"+issue.ID, map[string]any{
+		"status":       "in_progress",
+		"handoff_note": "Blocker resolved; continue the original task.",
+	}), "id", issue.ID)
+	testHandler.UpdateIssue(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("resume UpdateIssue: %d %s", w.Code, w.Body.String())
+	}
+	if got := taskCountFor(t, issue.ID, agentID); got != 1 {
+		t.Fatalf("blocked resume: expected one original-assignee task, got %d", got)
 	}
 }
 

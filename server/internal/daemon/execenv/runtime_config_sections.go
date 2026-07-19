@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/multica-ai/multica/server/internal/blocker"
 	"github.com/multica-ai/multica/server/internal/runtimeapps"
 )
 
@@ -291,7 +292,7 @@ func writeIssueMetadata(b *strings.Builder) {
 	b.WriteString("- **Read on entry.** Metadata is hints, not truth: latest comment / code wins on conflict. Empty `{}` is normal.\n")
 	b.WriteString("- **Write on exit.** Pin only if BOTH: (a) materially important to this issue, AND (b) a future run is likely to re-read it. Otherwise leave the bag alone. Stale keys: overwrite with the new value or `multica issue metadata delete`.\n")
 	b.WriteString("- **What NOT to pin.** No secrets, tokens, or API keys. No logs or comment summaries. No runtime bookkeeping (attempts, run timestamps, agent ids). No single-run details — those belong in the result comment.\n")
-	b.WriteString("- **Recommended keys** (use snake_case ASCII; reuse these names so queries stay consistent): `pr_url`, `pr_number`, `pipeline_status`, `deploy_url`, `external_issue_url`, `waiting_on`, `blocked_reason`, `decision`.\n\n")
+	b.WriteString("- **Recommended keys** (use snake_case ASCII; reuse these names so queries stay consistent): `pr_url`, `pr_number`, `pipeline_status`, `deploy_url`, `external_issue_url`, `waiting_on`, `blocked_reason`, `blocker_resolution_state`, `decision`. `blocker_resolution_state` is platform coordination state; ordinary workers should not set it.\n\n")
 }
 
 // writeInstructionPrecedence emits the "Agent Identity wins over the
@@ -408,6 +409,10 @@ func writeWorkflowComment(b *strings.Builder, provider string, ctx TaskContextFo
 
 // writeWorkflowAssignment emits the assignment-triggered workflow.
 func writeWorkflowAssignment(b *strings.Builder, ctx TaskContextForEnv) {
+	if blocker.IsResolverHandoff(ctx.HandoffNote) {
+		writeBlockerResolverWorkflow(b, ctx)
+		return
+	}
 	b.WriteString("You are responsible for managing the issue status throughout your work, unless your Agent Identity forbids issue status changes.\n\n")
 	fmt.Fprintf(b, "1. Run `multica issue get %s --output json` to understand your task\n", ctx.IssueID)
 	fmt.Fprintf(b, "2. Run `multica issue metadata list %s --output json` to see what prior agents pinned — best-effort, empty `{}` and CLI failures are normal. See the `## Issue Metadata` section above for what to look for.\n", ctx.IssueID)
@@ -421,7 +426,19 @@ func writeWorkflowAssignment(b *strings.Builder, ctx TaskContextForEnv) {
 	}
 	b.WriteString("7. Before exiting: only if this run produced a fact that clears the high bar (important AND likely to be re-read by future runs on this same issue, e.g. a new PR URL or deploy URL), or you noticed a metadata key from entry that is now stale, pin or clear it via `multica issue metadata set`/`delete`. Most runs write nothing here — that is the expected outcome, not a gap. When in doubt, do not write. See the `## Issue Metadata` section above for the full bar.\n")
 	fmt.Fprintf(b, "8. When done, run `multica issue status %s in_review` unless your Agent Identity forbids issue status changes; if it does, skip this step.\n", ctx.IssueID)
-	fmt.Fprintf(b, "9. If blocked, run `multica issue status %s blocked` unless your Agent Identity forbids issue status changes. Post a comment explaining the blocker unless your Agent Identity forbids issue comments.\n\n", ctx.IssueID)
+	fmt.Fprintf(b, "9. If you appear blocked, first exhaust safe self-recovery within your Agent Identity: inspect existing credentials and connected apps, use the available browser/CLI, repair local tooling, and ask another capable agent through a sub-issue when appropriate. Do not treat ordinary auth setup, missing build tooling, or a recoverable test environment as an immediate terminal blocker. If the task still cannot proceed, record a concise machine-readable reason with `multica issue metadata set %s --key blocked_reason --value \"...\" --type string`, post a comment with attempted remedies, then run `multica issue status %s blocked`. The platform will automatically route the blocker to your squad leader when possible.\n\n", ctx.IssueID, ctx.IssueID)
+}
+
+// writeBlockerResolverWorkflow keeps the issue blocked while the squad leader
+// fixes the reported capability/environment problem. An ordinary assignment
+// workflow would mark it in_progress on entry and wake the original worker
+// before anything had actually been resolved.
+func writeBlockerResolverWorkflow(b *strings.Builder, ctx TaskContextForEnv) {
+	b.WriteString("You are acting as the automatic blocker resolver for another agent. Keep the issue assigned to the original agent and keep its status `blocked` until the blocker is actually removed.\n\n")
+	fmt.Fprintf(b, "1. Run `multica issue get %s --output json`, `multica issue metadata list %s --output json`, and `multica issue comment list %s --recent 10 --output json` to understand the blocker and prior attempts.\n", ctx.IssueID, ctx.IssueID, ctx.IssueID)
+	b.WriteString("2. Resolve the blocker autonomously within your Agent Identity. Credentials, repository access, CI/build tooling, test environments, and routing work are coordination tasks: inspect available connected apps and browser/CLI sessions, repair configuration, or delegate a focused sub-issue to an agent that has the required capability.\n")
+	fmt.Fprintf(b, "3. When the blocker is removed, set `blocker_resolution_state` to `resolved` with `multica issue metadata set %s --key blocker_resolution_state --value resolved --type string`, post a concise handoff comment describing the fix/evidence, then run `multica issue status %s in_progress`. That transition automatically resumes the original assignee; do not implement their remaining task or move the issue to `in_review`.\n", ctx.IssueID, ctx.IssueID)
+	fmt.Fprintf(b, "4. Only if resolution truly requires a human decision, an unavailable physical resource, or new authority you cannot obtain: set `blocker_resolution_state` to `terminal` with `multica issue metadata set %s --key blocker_resolution_state --value terminal --type string`, post a comment naming the exact decision/resource/authority required and everything attempted, and leave the issue `blocked`.\n\n", ctx.IssueID)
 }
 
 // writeSubIssueCreation emits the Sub-issue Creation section (compressed

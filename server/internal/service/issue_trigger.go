@@ -18,6 +18,9 @@ const (
 	// RunSourceStatus covers promoting an already-assigned issue out of
 	// backlog into an active status.
 	RunSourceStatus RunEnqueueSource = "status"
+	// RunSourceResume covers promoting an agent-reported blocked issue after
+	// its resolver has removed the blocker.
+	RunSourceResume RunEnqueueSource = "resume"
 )
 
 // IssueTriggerProbe carries the request-scoped checks WillEnqueueRun cannot
@@ -110,6 +113,13 @@ func (s *IssueService) WillEnqueueRun(ctx context.Context, in IssueTriggerInput,
 			return IssueRunTrigger{}, false
 		}
 		source = RunSourceStatus
+	case in.StatusChanged && in.PrevStatus == "blocked" &&
+		issue.Status != "blocked" && issue.Status != "backlog" &&
+		issue.Status != "done" && issue.Status != "cancelled":
+		if probe.IsSelfLoop != nil && probe.IsSelfLoop() {
+			return IssueRunTrigger{}, false
+		}
+		source = RunSourceResume
 	default:
 		return IssueRunTrigger{}, false
 	}
@@ -123,7 +133,7 @@ func (s *IssueService) WillEnqueueRun(ctx context.Context, in IssueTriggerInput,
 		if !canAccess(agent) {
 			return IssueRunTrigger{}, false
 		}
-		if source == RunSourceStatus && s.hasPendingRun(ctx, issue.ID, issue.AssigneeID) {
+		if (source == RunSourceStatus || source == RunSourceResume) && s.hasPendingRun(ctx, issue.ID, issue.AssigneeID) {
 			return IssueRunTrigger{}, false
 		}
 		return IssueRunTrigger{
@@ -152,7 +162,7 @@ func (s *IssueService) WillEnqueueRun(ctx context.Context, in IssueTriggerInput,
 		if !canAccess(leader) {
 			return IssueRunTrigger{}, false
 		}
-		if source == RunSourceStatus && s.hasPendingRun(ctx, issue.ID, squad.LeaderID) {
+		if (source == RunSourceStatus || source == RunSourceResume) && s.hasPendingRun(ctx, issue.ID, squad.LeaderID) {
 			return IssueRunTrigger{}, false
 		}
 		return IssueRunTrigger{

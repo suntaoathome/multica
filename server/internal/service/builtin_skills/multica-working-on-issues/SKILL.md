@@ -133,6 +133,8 @@ High-signal keys (reuse these names so queries stay consistent):
 - `external_issue_url`
 - `waiting_on`
 - `blocked_reason`
+- `blocker_resolution_state` (platform/resolver-owned: `resolver_pending`,
+  `resolved`, or `terminal`; ordinary workers should not set it)
 - `decision`
 
 Not metadata: logs, summaries, files touched, timestamps, attempt counts,
@@ -189,6 +191,15 @@ on it. These are the contracts, not advice:
   `done` it enqueues no new agent work, but it does **not** stop tasks already in
   flight — a run in progress keeps going (MUL-4465). To stop a running task,
   cancel the task itself.
+- **`blocked`** starts an automatic recovery hop when the blocking agent belongs
+  to exactly one active squad: Multica keeps the original assignee, routes a
+  resolver task to that squad's leader, and treats the issue as waiting rather
+  than terminal. The leader moves `blocked → in_progress` only after resolving
+  the blocker; that transition automatically resumes the original assignee.
+  Before choosing `blocked`, exhaust safe recovery for credentials, repository
+  access, build tooling, and test environments, then record `blocked_reason` and
+  the attempted remedies. A blocker is terminal only when it needs a human
+  decision, unavailable physical resource, or authority the team cannot obtain.
 
 ## Sub-issues: `todo` starts work now, `backlog` parks it
 

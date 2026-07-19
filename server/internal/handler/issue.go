@@ -2797,7 +2797,7 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 			AssigneeChanged: assigneeChanged,
 			StatusChanged:   statusChanged,
 		},
-		h.issueTriggerWriteProbe(r, actorType, issue),
+		h.issueTriggerWriteProbe(r, actorType, actorID, issue),
 	); ok && !req.SuppressRun {
 		h.dispatchIssueRun(r.Context(), issue, trigger, actorType, actorID, req.HandoffNote)
 	}
@@ -3295,7 +3295,7 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 				AssigneeChanged: assigneeChanged,
 				StatusChanged:   statusChanged,
 			},
-			h.issueTriggerWriteProbe(r, actorType, issue),
+			h.issueTriggerWriteProbe(r, actorType, actorID, issue),
 		); ok && !req.Updates.SuppressRun {
 			h.dispatchIssueRun(r.Context(), issue, trigger, actorType, actorID, req.Updates.HandoffNote)
 		}
