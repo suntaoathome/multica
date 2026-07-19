@@ -22,14 +22,20 @@ case "$profile" in
 esac
 
 curl_json() {
-  curl --fail --silent --show-error --retry 3 --retry-all-errors "$1"
+  curl --fail --silent --show-error \
+    --connect-timeout 5 \
+    --retry 18 --retry-delay 5 --retry-max-time 90 --retry-all-errors \
+    "$1"
 }
 
 health="$(curl_json "$base_url/healthz")"
 jq -e '.status == "ok" and .checks.db == "ok" and .checks.migrations == "ok"' <<<"$health" >/dev/null
 
 for path in /login /download; do
-  code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --retry 3 --retry-all-errors "$base_url$path")"
+  code="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+    --connect-timeout 5 \
+    --retry 18 --retry-delay 5 --retry-max-time 90 --retry-all-errors \
+    "$base_url$path")"
   if [[ "$code" != "200" ]]; then
     echo "$path returned HTTP $code" >&2
     exit 1

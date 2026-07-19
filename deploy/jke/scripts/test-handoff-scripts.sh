@@ -65,6 +65,7 @@ cat >"$tmp_dir/bin/curl" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 args="$*"
+printf '%s\n' "$args" >>"${MOCK_CURL_LOG:?}"
 case "$args" in
   *"/healthz"*) printf '%s\n' '{"status":"ok","checks":{"db":"ok","migrations":"ok"}}' ;;
   *"/login"*|*"/download"*) printf '200' ;;
@@ -100,16 +101,19 @@ set -e
 grep -q 'HANDOFF_HELM_TIMEOUT must be' <<<"$invalid_timeout_output"
 
 helm_log="$tmp_dir/helm.log"
+curl_log="$tmp_dir/curl.log"
 (
   cd "$repo_root"
   PATH="$tmp_dir/bin:$PATH" \
     MOCK_MODE=deploy \
     MOCK_HELM_LOG="$helm_log" \
+    MOCK_CURL_LOG="$curl_log" \
     HANDOFF_EXPECTED_KUBE_CONTEXT=approved-context \
     HANDOFF_EXPECTED_KUBE_SERVER=https://approved.example \
     HANDOFF_HELM_TIMEOUT=90s \
     deploy/jke/scripts/deploy-handoff.sh staging "$digest" "$digest"
 )
 grep -q -- '--atomic --wait --timeout 90s' "$helm_log"
+grep -q -- '--connect-timeout 5 --retry 18 --retry-delay 5 --retry-max-time 90 --retry-all-errors https://handoff-staging.oxygent.org.cn/healthz' "$curl_log"
 
 echo "handoff-script-tests-ok"
