@@ -9,6 +9,7 @@ dist
 .next
 out
 build
+apps/mobile/android/
 bin
 dist-electron
 *.tsbuildinfo

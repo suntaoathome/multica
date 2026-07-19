@@ -26,6 +26,7 @@ import {
 import { Button } from "@multica/ui/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { setLoggedInCookie } from "@/features/auth/auth-cookie";
+import { detectOS } from "@/features/landing/utils/os-detect";
 import Link from "next/link";
 import { LoginPage, validateCliCallback } from "@multica/views/auth";
 import { useT } from "@multica/views/i18n";
@@ -78,7 +79,18 @@ function LoginPageContent() {
 
   const [desktopToken, setDesktopToken] = useState<string | null>(null);
   const [desktopError, setDesktopError] = useState("");
+  const [isAndroid, setIsAndroid] = useState(false);
   const hasOnboarded = useHasOnboarded();
+
+  useEffect(() => {
+    let cancelled = false;
+    void detectOS().then((result) => {
+      if (!cancelled) setIsAndroid(result.os === "android");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Latched once auth has been observed settled as logged-out on this page.
   // Any `user` that appears afterwards came from the login form in this
@@ -235,12 +247,16 @@ function LoginPageContent() {
       onTokenObtained={setLoggedInCookie}
       extra={
         <span className="text-xs text-muted-foreground">
-          {t(($) => $.web.prefer_desktop)}{" "}
+          {t(($) =>
+            isAndroid ? $.web.prefer_android : $.web.prefer_desktop,
+          )}{" "}
           <Link
-            href="/download"
+            href={isAndroid ? "/download#android" : "/download"}
             className="font-medium text-foreground underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground/70"
           >
-            {t(($) => $.web.download)}
+            {t(($) =>
+              isAndroid ? $.web.download_android : $.web.download,
+            )}
           </Link>
         </span>
       }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Download } from "lucide-react";
 import { useLocale } from "../../i18n";
+import type { AndroidDownload } from "../../utils/github-release";
 import type { DetectResult } from "../../utils/os-detect";
 import type { DownloadAssets } from "../../utils/parse-release-assets";
 import { heroButtonClassName } from "../shared";
@@ -8,6 +9,7 @@ import { heroButtonClassName } from "../shared";
 interface Props {
   detected: DetectResult | null;
   assets: DownloadAssets;
+  android?: AndroidDownload;
   /** True when the GitHub API fetch failed; disables all CTAs and
    *  surfaces a "version unavailable" line. */
   versionUnavailable: boolean;
@@ -21,12 +23,19 @@ interface Props {
 export function DownloadHero({
   detected,
   assets,
+  android,
   versionUnavailable,
 }: Props) {
   const { t } = useLocale();
   const d = t.download.hero;
 
-  const content = resolveContent(detected, assets, versionUnavailable, d);
+  const content = resolveContent(
+    detected,
+    assets,
+    versionUnavailable,
+    d,
+    android,
+  );
 
   return (
     <section className="relative overflow-hidden bg-[#05070b] text-white">
@@ -101,11 +110,27 @@ export function resolveContent(
   assets: DownloadAssets,
   versionUnavailable: boolean,
   d: HeroDict,
+  android?: AndroidDownload,
 ): HeroContent {
   // Before hydration resolves, render a neutral prompt. Same copy
   // also catches `os === "unknown"`.
   if (!detected || detected.os === "unknown") {
     return { title: d.unknown.title, sub: d.unknown.sub };
+  }
+
+  if (detected.os === "android") {
+    return {
+      title: d.android.title,
+      sub: d.android.sub,
+      primary: android
+        ? {
+            href: android.apkUrl,
+            label: d.android.primary,
+            disabled: false,
+          }
+        : undefined,
+      hint: android ? d.android.internalHint : d.android.unavailable,
+    };
   }
 
   if (detected.os === "mac") {

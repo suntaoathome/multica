@@ -31,6 +31,7 @@ import {
 } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
 import { cn } from "@/lib/utils";
+import { APP_NAME } from "@/lib/brand";
 
 const THEME_OPTIONS: Array<{ value: ThemePreference; label: string }> = [
   { value: "light", label: "Light" },
@@ -68,7 +69,7 @@ export default function SettingsPage() {
   const onSignOut = () => {
     Alert.alert(
       "Sign out",
-      "You'll need to sign in again to use Multica on this device.",
+      `You'll need to sign in again to use ${APP_NAME} on this device.`,
       [
         { text: "Cancel", style: "cancel" },
         {

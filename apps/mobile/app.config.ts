@@ -17,10 +17,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   return {
     ...config,
     name: isProd
-      ? "Multica"
+      ? "Handoff"
       : isStaging
-        ? "Multica (Staging)"
-        : "Multica (Dev)",
+        ? "Handoff (Staging)"
+        : "Handoff (Dev)",
     slug: "multica-mobile",
     version: "0.1.0",
     orientation: "portrait",
@@ -47,6 +47,19 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           ? "ai.multica.mobile.staging"
           : (process.env.EXPO_BUNDLE_IDENTIFIER_DEV ?? "ai.multica.mobile.dev"),
     },
+    android: {
+      package: isProd
+        ? "cn.org.oxygent.handoff"
+        : isStaging
+          ? "ai.multica.mobile.staging"
+          : "ai.multica.mobile.dev",
+      versionCode: 1,
+      adaptiveIcon: {
+        foregroundImage: "./assets/icon.png",
+        backgroundColor: "#ffffff",
+      },
+      permissions: ["android.permission.CAMERA"],
+    },
     plugins: [
       "expo-router",
       "expo-secure-store",
@@ -55,19 +68,21 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         "expo-image-picker",
         {
-          // iOS NSPhotoLibraryUsageDescription. Without this string in
-          // Info.plist, calling launchImageLibraryAsync hard-crashes on
-          // iOS 14+. Camera + microphone are disabled — we only ever read
-          // from the existing photo library.
+          // Native usage descriptions for the existing image-library and
+          // profile-camera flows. Audio recording remains disabled.
           photosPermission:
-            "Allow Multica to access your photos to attach images to issues and comments.",
-          cameraPermission: false,
+            "Allow Handoff to access your photos to attach images to issues and comments.",
+          cameraPermission:
+            "Allow Handoff to use your camera to take a profile photo.",
           microphonePermission: false,
         },
       ],
       [
         "expo-build-properties",
         {
+          android: {
+            minSdkVersion: 24,
+          },
           ios: {
             buildReactNativeFromSource: true,
           },

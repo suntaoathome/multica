@@ -57,6 +57,7 @@ export type LandingDict = {
     subheading: string;
     cta: string;
     downloadDesktop: string;
+    downloadAndroid: string;
     talkToSales: string;
     worksWith: string;
     imageAlt: string;
@@ -136,6 +137,13 @@ export type LandingDict = {
   };
   download: {
     hero: {
+      android: {
+        title: string;
+        sub: string;
+        primary: string;
+        internalHint: string;
+        unavailable: string;
+      };
       macArm64: {
         title: string;
         sub: string;
@@ -162,6 +170,10 @@ export type LandingDict = {
     };
     allPlatforms: {
       title: string;
+      androidLabel: string;
+      androidMinVersion: string;
+      androidInternal: string;
+      sha256Label: string;
       macArm64Label: string;
       macX64Label: string;
       winX64Label: string;
@@ -174,6 +186,7 @@ export type LandingDict = {
       formatAppImage: string;
       formatDeb: string;
       formatRpm: string;
+      formatApk: string;
       unavailable: string;
     };
     cli: {

@@ -1,6 +1,9 @@
-# Multica Mobile (iOS)
+# Handoff Mobile (iOS and Android)
 
-Expo + React Native iOS client for Multica. Independent from web/desktop — shares only types from `@multica/core/`. See [`CLAUDE.md`](./CLAUDE.md) for the locked tech-stack baseline and import rules.
+Expo + React Native client for Handoff. Independent from web/desktop — shares only types from `@multica/core/`. See [`CLAUDE.md`](./CLAUDE.md) for the locked tech-stack baseline and import rules.
+
+For the reproducible Android internal APK, checksums, signing boundary, and
+Google Play plan, see [`docs/android-release.md`](./docs/android-release.md).
 
 ## Just want to use it on your phone? (no development)
 
@@ -42,8 +45,26 @@ Everything below is for app developers — you can ignore the rest if you only w
 | `pnpm ios:mobile:device:staging:release` | Full rebuild + install on **USB iPhone**, Release (standalone) | staging |
 | `pnpm ios:mobile:device:prod` | Full rebuild + install on **USB iPhone**, Debug | production |
 | `pnpm ios:mobile:device:prod:release` | Full rebuild + install on **USB iPhone**, Release (standalone) | production |
+| `pnpm android:mobile` | Full rebuild + install on **Android emulator/device**, Debug | local |
+| `pnpm android:mobile:staging` | Full rebuild + install on **Android emulator/device**, Debug | staging |
+| `pnpm android:mobile:prod` | Full rebuild + install on **Android emulator/device**, Debug | production |
 
 `dev:*` runs Metro only — assumes the matching variant is already installed. `ios:mobile*` does a full native rebuild + install.
+
+## Run on Android
+
+Install Android Studio, an Android SDK, and either start an emulator or connect
+a device with USB debugging enabled. Then run:
+
+```bash
+pnpm android:mobile
+```
+
+The local variant reads `apps/mobile/.env.development.local`; staging and
+production use the corresponding commands in the table above. Expo generates
+the native `android/` project during the build, installs the development client,
+and starts Metro. The Dev, Staging, and Production application IDs are distinct,
+so the variants can coexist on one device.
 
 Bundle id and display name switch on `APP_ENV` (see `app.config.ts`), so Dev / Staging / Production variants can coexist on the same device or simulator.
 

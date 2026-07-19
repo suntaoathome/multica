@@ -1,0 +1,63 @@
+name: Mobile Android Internal APK
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main, handoff/safe-self-iteration]
+    paths:
+      - "apps/mobile/**"
+      - "packages/core/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/mobile-android-internal.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - run: pnpm install --frozen-lockfile
+      - name: Reject secrets and staging endpoints
+        run: |
+          ! grep -R -E '260718|handoff-staging|API_KEY|SECRET_KEY' apps/mobile/.env.production apps/mobile/app.config.ts
+      - name: Generate native project and build installable internal APK
+        run: |
+          pnpm -C apps/mobile android:prod:prebuild
+          pnpm -C apps/mobile android:prod:internal
+      - name: Inspect APK
+        run: |
+          APK=apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          $ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)/aapt dump badging "$APK" | tee apk-badging.txt
+          grep -F "package: name='cn.org.oxygent.handoff' versionCode='1' versionName='0.1.0'" apk-badging.txt
+          grep -F "sdkVersion:'24'" apk-badging.txt
+          unzip -p "$APK" assets/index.android.bundle | strings | grep -F 'https://handoff.oxygent.org.cn' | head -1 | tee apk-backend.txt
+          ! unzip -p "$APK" assets/index.android.bundle | strings | grep -E 'handoff-staging|260718'
+          sha256sum "$APK" | tee apk-sha256.txt
+          stat --printf='%n %s bytes\n' "$APK" | tee apk-size.txt
+          mkdir artifact
+          cp "$APK" artifact/handoff-0.1.0-internal.apk
+          cp apk-badging.txt apk-backend.txt apk-sha256.txt apk-size.txt artifact/
+      - name: Install and launch on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          script: .github/scripts/verify-android-emulator.sh
+      - uses: actions/upload-artifact@v6
+        with:
+          name: handoff-android-0.1.0-internal
+          path: artifact/
+          if-no-files-found: error
+          retention-days: 30

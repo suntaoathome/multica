@@ -7,6 +7,21 @@
 
 type IconProps = React.SVGProps<SVGSVGElement> & { size?: number };
 
+export function AndroidIcon({ size = 18, ...props }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="currentColor"
+      aria-hidden
+      {...props}
+    >
+      <path d="M17.6 9.48l1.84-3.18a.5.5 0 0 0-.18-.68.5.5 0 0 0-.68.18l-1.87 3.24A11.4 11.4 0 0 0 12 8a11.4 11.4 0 0 0-4.71 1.04L5.42 5.8a.5.5 0 0 0-.68-.18.5.5 0 0 0-.18.68L6.4 9.48A8.02 8.02 0 0 0 4 15h16a8.02 8.02 0 0 0-2.4-5.52ZM8.5 12.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm7 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2ZM4 16h16v2a2 2 0 0 1-2 2h-1v2a1 1 0 0 1-2 0v-2H9v2a1 1 0 0 1-2 0v-2H6a2 2 0 0 1-2-2v-2Z" />
+    </svg>
+  );
+}
+
 export function AppleIcon({ size = 18, ...props }: IconProps) {
   return (
     <svg
