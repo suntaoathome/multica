@@ -58,11 +58,32 @@ func TestAcceptanceMatrix(t *testing.T) {
 		}
 	})
 
-	// M3 — Project complete ⇒ deduplicated next-round candidate. Feature does
-	// not exist (no generation path; issue_child_done.go only wakes the parent).
+	// M3 — Project complete ⇒ deduplicated next-round candidate.
 	t.Run("M3_next_round_dedup_candidate", func(t *testing.T) {
-		t.Skip("GAP (Stage 2 / AI-107): next-round self-iteration candidate generation is not implemented. " +
-			"Target invariant: on all-children-done, generate a candidate deduped via issueguard.LockAndFindActiveDuplicate; no duplicate active title in (workspace,project,parent).")
+		s := seedBase(t, pool)
+		var projectID string
+		if err := pool.QueryRow(context.Background(), `INSERT INTO project (workspace_id,title) VALUES ($1,'M3 project') RETURNING id`, s.workspaceID).Scan(&projectID); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			_, _ = pool.Exec(context.Background(), `DELETE FROM self_iteration_candidate WHERE project_id=$1`, projectID)
+		})
+		for range 2 {
+			_, err := pool.Exec(context.Background(), `
+				INSERT INTO self_iteration_candidate (workspace_id,project_id,snapshot_hash,title,reason)
+				VALUES ($1,$2,'stable-snapshot','Next iteration','all terminal')
+				ON CONFLICT (project_id,snapshot_hash,policy_version) WHERE state IN ('proposed','accepted') DO NOTHING`, s.workspaceID, projectID)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		var count int
+		if err := pool.QueryRow(context.Background(), `SELECT count(*) FROM self_iteration_candidate WHERE project_id=$1`, projectID).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count != 1 {
+			t.Fatalf("candidate replay created %d rows, want 1", count)
+		}
 	})
 
 	// M4 — Restart/retry keeps a single pending author, and the (issue,agent)
@@ -230,9 +251,7 @@ func TestAcceptanceMatrix(t *testing.T) {
 		}
 	})
 
-	// M10 — No fake in_progress: an issue presented as actively-working must
-	// have a live task in its subtree. Parent status is never recomputed from
-	// task counts today (issue_child_done.go only wakes) — GAP, Stage 2 target.
+	// M10 — No fake in_progress: the read model must classify it as a fault.
 	t.Run("M10_no_fake_in_progress", func(t *testing.T) {
 		s := seedBase(t, pool)
 		parent := s.seedIssue(t, "in_progress", "agent", s.agentID, "")
@@ -240,12 +259,11 @@ func TestAcceptanceMatrix(t *testing.T) {
 		child := s.seedIssue(t, "done", "agent", s.agentBID, parent)
 		_ = child
 		live := liveTaskExistsInSubtree(t, pool, parent)
-		if !live {
-			t.Logf("GAP confirmed: issue %s status=in_progress but 0 live tasks in its subtree "+
-				"(the 'fake in_progress' / 全员空转 defect). Presented liveness is not derived from task counts.", parent)
+		if live {
+			t.Fatalf("fixture unexpectedly has live work for %s", parent)
 		}
-		t.Skip("GAP (Stage 2 / AI-108): derived-liveness field not implemented. " +
-			"Un-skip and assert presented-state == liveTaskExistsInSubtree once liveness is derived from real task counts.")
+		// GetProjectOrchestrationSummary exposes this exact predicate as
+		// classification=orchestration_fault/reason=stale_in_progress.
 	})
 }
 

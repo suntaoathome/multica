@@ -2931,6 +2931,18 @@ func (h *Handler) assigneeFallbackAgent(ctx context.Context, issue db.Issue, act
 	if err != nil {
 		return db.Agent{}, false, false
 	}
+	// A plain comment to the standing assignee is input for its current
+	// controller, not authority to start a second controller. Explicit
+	// @mentions keep their existing follow-up semantics in the mention path.
+	if !hasPending {
+		hasPending, err = h.Queries.HasActiveTaskForIssueAndAgent(ctx, db.HasActiveTaskForIssueAndAgentParams{
+			IssueID: issue.ID,
+			AgentID: issue.AssigneeID,
+		})
+		if err != nil {
+			return db.Agent{}, false, false
+		}
+	}
 	return agent, hasPending, true
 }
 

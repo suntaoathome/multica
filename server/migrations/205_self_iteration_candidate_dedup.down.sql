@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS idx_self_iteration_candidate_live_snapshot;

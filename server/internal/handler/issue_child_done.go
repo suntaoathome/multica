@@ -66,9 +66,6 @@ import (
 // notification on the side of a successful status update; failing it must
 // not roll back the user's status change.
 func (h *Handler) notifyParentOfChildDone(ctx context.Context, prev, issue db.Issue) {
-	if !issue.ParentIssueID.Valid {
-		return
-	}
 	// Fire on a transition INTO a terminal status (done OR cancelled), not only
 	// `done`. A cancelled child can close a stage too: isTerminalChildStatus
 	// treats cancelled as terminal (a cancelled sibling never finishes, so it
@@ -77,6 +74,12 @@ func (h *Handler) notifyParentOfChildDone(ctx context.Context, prev, issue db.Is
 	// makes a later cancelled -> done edit a no-op (terminal -> terminal), which
 	// avoids a lagging duplicate wake.
 	if isTerminalChildStatus(prev.Status) || !isTerminalChildStatus(issue.Status) {
+		return
+	}
+	// Project completion is independent of whether this child has a parent
+	// assignee to wake. Candidate creation is idempotent by project snapshot.
+	h.ensureSelfIterationCandidate(ctx, issue)
+	if !issue.ParentIssueID.Valid {
 		return
 	}
 	parent, err := h.Queries.GetIssue(ctx, issue.ParentIssueID)

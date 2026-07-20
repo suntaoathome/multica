@@ -56,6 +56,38 @@ export interface ListProjectsResponse {
   total: number;
 }
 
+export interface OrchestrationReason {
+  code: string;
+  message: string;
+}
+
+export interface IssueOrchestrationSummary {
+  issue_id: string;
+  issue_status: string;
+  execution_state: "running" | "ready" | "waiting" | "temporarily_not_ready" | "faulted" | "complete";
+  reason: OrchestrationReason;
+  active_tasks: number;
+  ready_tasks: number;
+}
+
+export interface SelfIterationCandidate {
+  id: string;
+  snapshot_hash: string;
+  policy_version: number;
+  state: "proposed" | "accepted" | "rejected" | "superseded";
+  title: string;
+  reason: string;
+  created_at: string;
+}
+
+export interface ProjectOrchestrationSummary {
+  project_id: string;
+  classification: "ready" | "complete" | "waiting_external" | "temporarily_not_ready" | "orchestration_fault";
+  reason: OrchestrationReason;
+  issues: IssueOrchestrationSummary[];
+  self_iteration_candidates: SelfIterationCandidate[];
+}
+
 // ProjectResource is a typed pointer from a project to an external resource.
 // The resource_ref shape depends on resource_type. New types add a case in
 // validateAndNormalizeResourceRef on the server and a renderer in the UI.
