@@ -15,7 +15,7 @@ WITH ranked AS (
       AND status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
       AND trigger_comment_id IS NULL
       AND is_leader_task = FALSE
-      AND originator_source = 'issue_assignment'
+      AND trigger_evidence_kind = 'issue_assignment'
 )
 UPDATE agent_task_queue AS task
 SET status = 'cancelled',

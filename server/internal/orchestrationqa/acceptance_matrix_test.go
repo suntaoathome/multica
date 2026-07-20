@@ -104,8 +104,8 @@ func TestAcceptanceMatrix(t *testing.T) {
 		// The backstop is real: a concurrent second queued child (patrol +
 		// restart both retrying) is rejected by idx_one_pending_task_per_issue_agent.
 		_, err := pool.Exec(context.Background(),
-			`INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, originator_user_id, accountable_user_id, originator_source)
-			 VALUES ($1,$2,$3,'queued',$4,$4,'issue_assignment')`,
+			`INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, originator_user_id, accountable_user_id, originator_source, trigger_evidence_kind)
+			 VALUES ($1,$2,$3,'queued',$4,$4,'direct_human','issue_assignment')`,
 			s.agentID, s.runtimeID, issue, s.userID)
 		if !isUniqueViolation(err) {
 			t.Fatalf("expected unique_violation on 2nd queued child (single-author backstop), got: %v", err)
@@ -113,8 +113,8 @@ func TestAcceptanceMatrix(t *testing.T) {
 
 		// Deferred retries participate in the same issue-wide fence.
 		_, derr := pool.Exec(context.Background(),
-			`INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, originator_user_id, accountable_user_id, originator_source)
-			 VALUES ($1,$2,$3,'deferred',$4,$4,'issue_assignment')`,
+			`INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, originator_user_id, accountable_user_id, originator_source, trigger_evidence_kind)
+			 VALUES ($1,$2,$3,'deferred',$4,$4,'direct_human','issue_assignment')`,
 			s.agentID, s.runtimeID, issue, s.userID)
 		if !isUniqueViolation(derr) {
 			t.Fatalf("expected unique_violation on deferred retry while issue is active, got: %v", derr)
@@ -130,8 +130,8 @@ func TestAcceptanceMatrix(t *testing.T) {
 		// A comment-triggered path that tried to insert a fresh queued task
 		// (instead of merging) would hit the unique index — proving the backstop.
 		_, err := pool.Exec(context.Background(),
-			`INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, originator_user_id, accountable_user_id, originator_source)
-			 VALUES ($1,$2,$3,'queued',$4,$4,'comment')`,
+			`INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, originator_user_id, accountable_user_id, originator_source, trigger_evidence_kind)
+			 VALUES ($1,$2,$3,'queued',$4,$4,'comment_source','issue_assignment')`,
 			s.agentID, s.runtimeID, issue, s.userID)
 		if !isUniqueViolation(err) {
 			t.Fatalf("expected unique_violation guarding against a 2nd comment-triggered author, got: %v", err)
@@ -150,8 +150,8 @@ func TestAcceptanceMatrix(t *testing.T) {
 			t.Fatalf("reassign: %v", err)
 		}
 		_, err := pool.Exec(context.Background(),
-			`INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, originator_user_id, accountable_user_id, originator_source)
-			 VALUES ($1,$2,$3,'queued',$4,$4,'issue_assignment')`,
+			`INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, originator_user_id, accountable_user_id, originator_source, trigger_evidence_kind)
+			 VALUES ($1,$2,$3,'queued',$4,$4,'direct_human','issue_assignment')`,
 			s.agentBID, s.runtimeID, issue, s.userID)
 		if !isUniqueViolation(err) {
 			t.Fatalf("expected issue-wide fence to reject reassigned author while prior task is running, got: %v", err)
@@ -285,4 +285,71 @@ func TestScenarioIsolation(t *testing.T) {
 	if _, err := uuid.Parse(s.workspaceID); err != nil {
 		t.Fatalf("workspace id not a uuid: %v", err)
 	}
+}
+
+func TestIssueAssignmentControllerConcurrencyFence(t *testing.T) {
+	pool := integrationPool(t)
+
+	t.Run("second_issue_dispatch_is_rejected", func(t *testing.T) {
+		s := seedBase(t, pool)
+		issue := s.seedIssue(t, "in_progress", "agent", s.agentID, "")
+		s.seedTask(t, issue, s.agentID, "dispatched")
+		_, err := s.pool.Exec(context.Background(),
+			`INSERT INTO agent_task_queue
+			   (agent_id, runtime_id, issue_id, status, originator_user_id,
+			    accountable_user_id, originator_source, trigger_evidence_kind)
+			 VALUES ($1,$2,$3,'dispatched',$4,$4,'owner_fallback','issue_assignment')`,
+			s.agentBID, s.runtimeID, issue, s.userID)
+		if !isUniqueViolation(err) {
+			t.Fatalf("second issue dispatch: got %v, want unique_violation", err)
+		}
+		assertAtMostOneActiveAuthorForIssue(t, s.pool, issue)
+	})
+
+	t.Run("daemon_retry_and_patrol_reassign", func(t *testing.T) {
+		s := seedBase(t, pool)
+		issue := s.seedIssue(t, "in_progress", "agent", s.agentID, "")
+		assertConcurrentControllerRace(t, s, issue, "direct_human")
+	})
+
+	t.Run("concurrent_comment_triggers", func(t *testing.T) {
+		s := seedBase(t, pool)
+		issue := s.seedIssue(t, "in_progress", "agent", s.agentID, "")
+		assertConcurrentControllerRace(t, s, issue, "comment_source")
+	})
+}
+
+func assertConcurrentControllerRace(t *testing.T, s *scenario, issueID, originatorSource string) {
+	t.Helper()
+	type result struct{ err error }
+	results := make(chan result, 2)
+	for _, agentID := range []string{s.agentID, s.agentBID} {
+		agentID := agentID
+		go func() {
+			_, err := s.pool.Exec(context.Background(),
+				`INSERT INTO agent_task_queue
+				   (agent_id, runtime_id, issue_id, status, originator_user_id,
+				    accountable_user_id, originator_source, trigger_evidence_kind)
+				 VALUES ($1,$2,$3,'queued',$4,$4,$5,'issue_assignment')`,
+				agentID, s.runtimeID, issueID, s.userID, originatorSource)
+			results <- result{err: err}
+		}()
+	}
+
+	successes, conflicts := 0, 0
+	for range 2 {
+		r := <-results
+		switch {
+		case r.err == nil:
+			successes++
+		case isUniqueViolation(r.err):
+			conflicts++
+		default:
+			t.Fatalf("concurrent controller insert failed unexpectedly: %v", r.err)
+		}
+	}
+	if successes != 1 || conflicts != 1 {
+		t.Fatalf("concurrent controller race: successes=%d unique_conflicts=%d; want 1/1", successes, conflicts)
+	}
+	assertAtMostOneActiveAuthorForIssue(t, s.pool, issueID)
 }

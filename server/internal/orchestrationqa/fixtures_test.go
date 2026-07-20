@@ -165,16 +165,18 @@ func (s *scenario) seedIssue(t *testing.T, status, assigneeType, assigneeID, par
 }
 
 // seedTask inserts an agent_task_queue row in a chosen state. Attribution
-// columns are stamped consistently (originator == accountable, source set) so
-// the seeded row satisfies the strict invariant CHECK from migration 197/198.
+// columns are stamped like the production issue-assignment enqueue path:
+// attribution source describes the accountable actor, while evidence kind
+// identifies the controller trigger used by the issue-wide active-task fence.
 func (s *scenario) seedTask(t *testing.T, issueID, agentID, status string) string {
 	t.Helper()
 	var id string
 	err := s.pool.QueryRow(context.Background(),
 		`INSERT INTO agent_task_queue
 		   (agent_id, runtime_id, issue_id, status,
-		    originator_user_id, accountable_user_id, originator_source)
-		 VALUES ($1, $2, $3, $4, $5, $5, 'issue_assignment')
+		    originator_user_id, accountable_user_id, originator_source,
+		    trigger_evidence_kind)
+		 VALUES ($1, $2, $3, $4, $5, $5, 'direct_human', 'issue_assignment')
 		 RETURNING id`,
 		agentID, s.runtimeID, issueID, status, s.userID,
 	).Scan(&id)
