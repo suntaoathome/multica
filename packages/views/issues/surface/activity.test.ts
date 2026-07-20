@@ -48,6 +48,18 @@ describe("deriveIssueSurfaceActivity", () => {
     });
     expect(activity.activityByIssueId.has("i-4")).toBe(false);
   });
+
+  it("never promotes child execution to its parent issue", () => {
+    const activity = deriveIssueSurfaceActivity([
+      task({ id: "child-run", issue_id: "child-1", status: "running" }),
+      task({ id: "child-queue", issue_id: "child-2", status: "queued" }),
+    ]);
+
+    expect(activity.activityByIssueId.has("parent-1")).toBe(false);
+    expect(activity.runningIssueIds.has("parent-1")).toBe(false);
+    expect(activity.activityByIssueId.get("child-1")?.isWorking).toBe(true);
+    expect(activity.activityByIssueId.get("child-2")?.isQueued).toBe(true);
+  });
 });
 
 describe("selectIssueTasks", () => {
@@ -80,5 +92,10 @@ describe("selectIssueTasks", () => {
     expect(groups.queued.map((t) => t.id)).not.toContain("done-1");
     const noMatch = selectIssueTasks(snapshot, "does-not-exist");
     expect(noMatch).toEqual({ running: [], queued: [] });
+  });
+
+  it("does not return descendant tasks when selecting a parent", () => {
+    const groups = selectIssueTasks(snapshot, "parent-1");
+    expect(groups).toEqual({ running: [], queued: [] });
   });
 });
