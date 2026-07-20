@@ -30,6 +30,11 @@ const agentTasksRef = vi.hoisted(() => ({
   current: () => new Promise<unknown>(() => {}),
 }));
 vi.mock("@multica/core/agents", () => ({
+  deriveExecutionSummary: () => ({
+    state: "idle",
+    running: 0,
+    queued: 0,
+  }),
   agentTaskSnapshotOptions: () => ({
     queryKey: ["snapshot"],
     queryFn: () => Promise.resolve([]),
