@@ -1107,6 +1107,7 @@ func NewRouterWithOptions(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus
 				r.Route("/{id}", func(r chi.Router) {
 					r.Get("/", h.GetProject)
 					r.Get("/orchestration-summary", h.GetProjectOrchestrationSummary)
+					r.Post("/orchestration-recovery", h.RecoverProjectOrchestration)
 					r.Put("/", h.UpdateProject)
 					r.Delete("/", h.DeleteProject)
 					r.Get("/resources", h.ListProjectResources)

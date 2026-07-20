@@ -554,6 +554,19 @@ const OrchestrationReasonSchema = z.object({
   message: z.string(),
 }).loose();
 
+const OrchestrationEventSchema = z.object({
+  type: z.string(),
+  reason_code: z.string(),
+  created_at: z.string(),
+}).loose();
+
+const OrchestrationRecoveryActionSchema = z.object({
+  action: z.literal("resume_stale_issue"),
+  allowed: z.boolean(),
+  reason: z.string(),
+  side_effect: z.string(),
+}).loose();
+
 export const ProjectOrchestrationSummarySchema = z.object({
   project_id: z.string(),
   classification: z.enum(["ready", "complete", "waiting_external", "temporarily_not_ready", "orchestration_fault"]),
@@ -565,6 +578,10 @@ export const ProjectOrchestrationSummarySchema = z.object({
     reason: OrchestrationReasonSchema,
     active_tasks: z.number().default(0),
     ready_tasks: z.number().default(0),
+    running_slots: z.number().default(0),
+    capacity: z.number().default(0),
+    last_event: OrchestrationEventSchema.nullish(),
+    recovery_action: OrchestrationRecoveryActionSchema.nullish(),
   }).loose()).default([]),
   self_iteration_candidates: z.array(z.object({
     id: z.string(),
@@ -575,6 +592,14 @@ export const ProjectOrchestrationSummarySchema = z.object({
     reason: z.string(),
     created_at: z.string(),
   }).loose()).default([]),
+  running_slots: z.number().default(0),
+  capacity: z.number().default(0),
+  last_event: OrchestrationEventSchema.nullish(),
+}).loose();
+
+export const OrchestrationRecoveryResponseSchema = z.object({
+  applied: z.boolean(),
+  reason: z.string(),
 }).loose();
 
 const IssueAssigneeGroupSchema = z.object({

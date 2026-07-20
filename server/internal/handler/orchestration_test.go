@@ -79,4 +79,11 @@ func TestProjectOrchestrationSummaryReportsStaleInProgress(t *testing.T) {
 	if got.Classification != "orchestration_fault" || len(got.Issues) != 1 || got.Issues[0].Reason.Code != "stale_in_progress" {
 		t.Fatalf("unexpected summary: %+v", got)
 	}
+	action := got.Issues[0].RecoveryAction
+	if action == nil || action.Action != "resume_stale_issue" || action.Allowed {
+		t.Fatalf("recovery action = %+v, want disabled resume_stale_issue for unassigned issue", action)
+	}
+	if got.RunningSlots != 0 || got.Capacity != 0 {
+		t.Fatalf("slots = %d/%d, want 0/0", got.RunningSlots, got.Capacity)
+	}
 }
