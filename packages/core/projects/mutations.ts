@@ -80,3 +80,14 @@ export function useDeleteProject() {
     },
   });
 }
+
+export function useRecoverProjectOrchestration(wsId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ projectId, issueId }: { projectId: string; issueId: string }) =>
+      api.recoverProjectOrchestration(projectId, issueId),
+    onSettled: (_data, _error, variables) => {
+      qc.invalidateQueries({ queryKey: projectKeys.orchestration(wsId, variables.projectId) });
+    },
+  });
+}
