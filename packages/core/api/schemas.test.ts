@@ -58,6 +58,29 @@ const baseIssue = {
   updated_at: "2026-01-01T00:00:00Z",
 };
 
+describe("AgentTaskListSchema observability compatibility", () => {
+  const baseTask = {
+    id: "task-1", agent_id: "agent-1", runtime_id: "runtime-1", issue_id: "issue-1",
+    status: "queued", priority: 0, dispatched_at: null, started_at: null,
+    completed_at: null, result: null, error: null, created_at: "2026-07-20T00:00:00Z",
+  };
+
+  it("keeps a task when optional recovery collections are malformed", () => {
+    const parsed = AgentTaskListSchema.parse([{
+      ...baseTask,
+      recovery_actions: "bad-server-value",
+      dispatch_history: { bad: true },
+      execution_reason: { code: "runtime_offline", message: "Runtime is offline" },
+    }]);
+    expect(parsed[0]).toMatchObject({
+      id: "task-1",
+      recovery_actions: [],
+      dispatch_history: [],
+      execution_reason: { code: "runtime_offline" },
+    });
+  });
+});
+
 describe("IssueSchema (via ListIssuesResponseSchema)", () => {
   it("accepts a primitive metadata KV map", () => {
     const payload = {

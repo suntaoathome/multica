@@ -666,7 +666,18 @@
       "cancel_failed_toast": "取消 task 失败",
       "started_prefix": "{{when}}启动",
       "dispatched_prefix": "{{when}}派发",
-      "queued_prefix": "{{when}}排队"
+      "queued_prefix": "{{when}}排队",
+      "last_event": "最后事件 {{when}}",
+      "cancellation_pending": "正在取消",
+      "execution": {
+        "running": "运行中 {{count}}",
+        "running_capacity": "运行中 {{running}}/{{capacity}}",
+        "ready": "就绪 · {{count}} 个排队任务",
+        "waiting": "等待中",
+        "external": "等待外部依赖",
+        "failed": "执行失败",
+        "idle": "空闲"
+      }
     }
   },
   "char_counter": {

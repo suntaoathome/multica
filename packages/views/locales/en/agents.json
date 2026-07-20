@@ -680,7 +680,18 @@
       "cancel_failed_toast": "Failed to cancel task",
       "started_prefix": "Started {{when}}",
       "dispatched_prefix": "Dispatched {{when}}",
-      "queued_prefix": "Queued {{when}}"
+      "queued_prefix": "Queued {{when}}",
+      "last_event": "Last event {{when}}",
+      "cancellation_pending": "Cancellation pending",
+      "execution": {
+        "running": "Running {{count}}",
+        "running_capacity": "Running {{running}}/{{capacity}}",
+        "ready": "Ready · {{count}} queued",
+        "waiting": "Waiting",
+        "external": "External dependency",
+        "failed": "Failed",
+        "idle": "Idle"
+      }
     }
   },
   "char_counter": {

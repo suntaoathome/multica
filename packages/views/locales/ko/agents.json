@@ -574,7 +574,18 @@
       "cancel_failed_toast": "작업을 취소하지 못했습니다",
       "started_prefix": "{{when}} 시작됨",
       "dispatched_prefix": "{{when}} 디스패치됨",
-      "queued_prefix": "{{when}} 대기 시작"
+      "queued_prefix": "{{when}} 대기 시작",
+      "last_event": "마지막 이벤트 {{when}}",
+      "cancellation_pending": "취소 처리 중",
+      "execution": {
+        "running": "실행 중 {{count}}",
+        "running_capacity": "실행 중 {{running}}/{{capacity}}",
+        "ready": "준비됨 · {{count}}개 대기 중",
+        "waiting": "대기 중",
+        "external": "외부 종속성 대기",
+        "failed": "실패",
+        "idle": "유휴"
+      }
     }
   },
   "char_counter": {
