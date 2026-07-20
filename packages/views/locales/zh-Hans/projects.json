@@ -80,6 +80,17 @@
     "toast_project_deleted": "已删除项目",
     "toast_move_issue_failed": "移动 issue 失败"
   },
+  "orchestration": {
+    "title": "编排状态", "loading": "正在加载编排状态", "error": "无法加载编排状态。",
+    "retry": "重试", "refresh": "重新检查", "refresh_hint": "获取最新服务端状态，不会启动或更改任何工作。",
+    "active": "进行中的执行", "ready": "就绪任务", "running_slots": "运行槽位", "empty": "该项目还没有关联 issue。",
+    "last_event": "最后事件：{{type}} · {{time}}", "no_event": "暂无事件记录", "issue_slots": "槽位 {{running}} / {{capacity}}",
+    "recover": "恢复", "recovering": "正在恢复…", "admin_only": "仅工作区所有者和管理员可以恢复停滞任务。",
+    "recovery_title": "恢复停滞 issue？", "confirm_recovery": "恢复 issue", "cancel": "取消",
+    "recovery_applied": "已将 issue 加入恢复队列", "recovery_already_active": "已有执行正在运行", "recovery_failed": "无法恢复 issue",
+    "issue_states": "Issue 编排状态", "candidates": "下一轮候选",
+    "classification": { "ready": "已就绪", "complete": "已完成", "waiting_external": "等待外部输入", "temporarily_not_ready": "等待唤醒", "orchestration_fault": "需要处理" }
+  },
   "resources": {
     "section_header": "资源",
     "empty": "还没有关联资源。",
