@@ -23,6 +23,7 @@ import {
   ListIssuesResponseSchema,
   ListPropertiesResponseSchema,
   SearchProjectsResponseSchema,
+  ProjectOrchestrationSummarySchema,
   RuntimeHourlyActivityListSchema,
   RuntimeUsageByAgentListSchema,
   RuntimeUsageByHourListSchema,
@@ -145,6 +146,26 @@ describe("IssueSchema (via ListIssuesResponseSchema)", () => {
     };
     const parsed = ListIssuesResponseSchema.parse(payload);
     expect(parsed.issues[0]?.properties).toEqual({ "def-2": "opt-a" });
+  });
+});
+
+describe("ProjectOrchestrationSummarySchema", () => {
+  it("parses structured ready reasons and defaults additive collections", () => {
+    const parsed = ProjectOrchestrationSummarySchema.parse({
+      project_id: "p1",
+      classification: "orchestration_fault",
+      reason: { code: "stale_in_progress", message: "No durable execution path" },
+    });
+    expect(parsed.issues).toEqual([]);
+    expect(parsed.self_iteration_candidates).toEqual([]);
+  });
+
+  it("rejects unknown control-flow enums instead of treating them as ready", () => {
+    expect(ProjectOrchestrationSummarySchema.safeParse({
+      project_id: "p1",
+      classification: "probably_ready",
+      reason: { code: "unknown", message: "unknown" },
+    }).success).toBe(false);
   });
 });
 

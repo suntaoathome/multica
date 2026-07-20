@@ -549,6 +549,34 @@ export const EMPTY_SEARCH_PROJECTS_RESPONSE: SearchProjectsResponse = {
   total: 0,
 };
 
+const OrchestrationReasonSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+}).loose();
+
+export const ProjectOrchestrationSummarySchema = z.object({
+  project_id: z.string(),
+  classification: z.enum(["ready", "complete", "waiting_external", "temporarily_not_ready", "orchestration_fault"]),
+  reason: OrchestrationReasonSchema,
+  issues: z.array(z.object({
+    issue_id: z.string(),
+    issue_status: z.string(),
+    execution_state: z.enum(["running", "ready", "waiting", "temporarily_not_ready", "faulted", "complete"]),
+    reason: OrchestrationReasonSchema,
+    active_tasks: z.number().default(0),
+    ready_tasks: z.number().default(0),
+  }).loose()).default([]),
+  self_iteration_candidates: z.array(z.object({
+    id: z.string(),
+    snapshot_hash: z.string(),
+    policy_version: z.number(),
+    state: z.enum(["proposed", "accepted", "rejected", "superseded"]),
+    title: z.string(),
+    reason: z.string(),
+    created_at: z.string(),
+  }).loose()).default([]),
+}).loose();
+
 const IssueAssigneeGroupSchema = z.object({
   id: z.string(),
   assignee_type: z.string().nullable(),

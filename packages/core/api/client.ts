@@ -146,6 +146,7 @@ import type {
   CreateBillingCheckoutSessionResponse,
   BillingCheckoutSessionStatus,
   CreateBillingPortalSessionResponse,
+  ProjectOrchestrationSummary,
 } from "../types";
 import type { OnboardingCompletionPath } from "../onboarding/types";
 import type { CreateFeedbackResponse, FeedbackKind } from "../feedback/types";
@@ -160,6 +161,7 @@ import { getCurrentSlug } from "../platform/workspace-storage";
 import { parseWithFallback } from "./schema";
 import {
   AgentTaskListSchema,
+  ProjectOrchestrationSummarySchema,
   AgentTemplateSchema,
   AgentTemplateSummaryListSchema,
   AttachmentResponseSchema,
@@ -2131,6 +2133,17 @@ export class ApiClient {
 
   async getProject(id: string): Promise<Project> {
     return this.fetch(`/api/projects/${id}`);
+  }
+
+  async getProjectOrchestrationSummary(id: string): Promise<ProjectOrchestrationSummary> {
+    const raw = await this.fetch<unknown>(`/api/projects/${id}/orchestration-summary`);
+    return parseWithFallback(raw, ProjectOrchestrationSummarySchema, {
+      project_id: id,
+      classification: "orchestration_fault",
+      reason: { code: "malformed_response", message: "The orchestration summary response was invalid" },
+      issues: [],
+      self_iteration_candidates: [],
+    }, { endpoint: "GET /api/projects/:id/orchestration-summary" });
   }
 
   async createProject(data: CreateProjectRequest): Promise<Project> {
