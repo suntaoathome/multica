@@ -147,6 +147,7 @@ import type {
   BillingCheckoutSessionStatus,
   CreateBillingPortalSessionResponse,
   ProjectOrchestrationSummary,
+  OrchestrationRecoveryResponse,
 } from "../types";
 import type { OnboardingCompletionPath } from "../onboarding/types";
 import type { CreateFeedbackResponse, FeedbackKind } from "../feedback/types";
@@ -162,6 +163,7 @@ import { parseWithFallback } from "./schema";
 import {
   AgentTaskListSchema,
   ProjectOrchestrationSummarySchema,
+  OrchestrationRecoveryResponseSchema,
   AgentTemplateSchema,
   AgentTemplateSummaryListSchema,
   AttachmentResponseSchema,
@@ -2146,7 +2148,24 @@ export class ApiClient {
       reason: { code: "malformed_response", message: "The orchestration summary response was invalid" },
       issues: [],
       self_iteration_candidates: [],
+      running_slots: 0,
+      capacity: 0,
     }, { endpoint: "GET /api/projects/:id/orchestration-summary" });
+  }
+
+  async recoverProjectOrchestration(
+    projectId: string,
+    issueId: string,
+    action: "resume_stale_issue" = "resume_stale_issue",
+  ): Promise<OrchestrationRecoveryResponse> {
+    const raw = await this.fetch<unknown>(`/api/projects/${projectId}/orchestration-recovery`, {
+      method: "POST",
+      body: JSON.stringify({ issue_id: issueId, action }),
+    });
+    return parseWithFallback(raw, OrchestrationRecoveryResponseSchema, {
+      applied: false,
+      reason: "malformed_response",
+    }, { endpoint: "POST /api/projects/:id/orchestration-recovery" });
   }
 
   async createProject(data: CreateProjectRequest): Promise<Project> {

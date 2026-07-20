@@ -68,6 +68,23 @@ export interface IssueOrchestrationSummary {
   reason: OrchestrationReason;
   active_tasks: number;
   ready_tasks: number;
+  running_slots: number;
+  capacity: number;
+  last_event?: OrchestrationEvent | null;
+  recovery_action?: RecoveryAction | null;
+}
+
+export interface OrchestrationEvent {
+  type: string;
+  reason_code: string;
+  created_at: string;
+}
+
+export interface RecoveryAction {
+  action: "resume_stale_issue";
+  allowed: boolean;
+  reason: string;
+  side_effect: string;
 }
 
 export interface SelfIterationCandidate {
@@ -82,10 +99,18 @@ export interface SelfIterationCandidate {
 
 export interface ProjectOrchestrationSummary {
   project_id: string;
-  classification: "ready" | "complete" | "waiting_external" | "temporarily_not_ready" | "orchestration_fault";
+  classification: "running" | "ready" | "complete" | "waiting_external" | "temporarily_not_ready" | "orchestration_fault";
   reason: OrchestrationReason;
   issues: IssueOrchestrationSummary[];
   self_iteration_candidates: SelfIterationCandidate[];
+  running_slots: number;
+  capacity: number;
+  last_event?: OrchestrationEvent | null;
+}
+
+export interface OrchestrationRecoveryResponse {
+  applied: boolean;
+  reason: "assignment_run_queued" | "active_execution_exists" | string;
 }
 
 // ProjectResource is a typed pointer from a project to an external resource.

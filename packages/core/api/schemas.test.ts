@@ -24,6 +24,7 @@ import {
   ListPropertiesResponseSchema,
   SearchProjectsResponseSchema,
   ProjectOrchestrationSummarySchema,
+  OrchestrationRecoveryResponseSchema,
   RuntimeHourlyActivityListSchema,
   RuntimeUsageByAgentListSchema,
   RuntimeUsageByHourListSchema,
@@ -181,6 +182,8 @@ describe("ProjectOrchestrationSummarySchema", () => {
     });
     expect(parsed.issues).toEqual([]);
     expect(parsed.self_iteration_candidates).toEqual([]);
+    expect(parsed.running_slots).toBe(0);
+    expect(parsed.capacity).toBe(0);
   });
 
   it("rejects unknown control-flow enums instead of treating them as ready", () => {
@@ -189,6 +192,20 @@ describe("ProjectOrchestrationSummarySchema", () => {
       classification: "probably_ready",
       reason: { code: "unknown", message: "unknown" },
     }).success).toBe(false);
+  });
+
+  it("accepts active execution as a project-level running classification", () => {
+    expect(ProjectOrchestrationSummarySchema.safeParse({
+      project_id: "p1",
+      classification: "running",
+      reason: { code: "active_execution", message: "An execution is running" },
+    }).success).toBe(true);
+  });
+});
+
+describe("OrchestrationRecoveryResponseSchema", () => {
+  it("rejects a malformed recovery acknowledgement", () => {
+    expect(OrchestrationRecoveryResponseSchema.safeParse({ applied: "yes", reason: 1 }).success).toBe(false);
   });
 });
 
