@@ -8,8 +8,23 @@ import (
 	"time"
 
 	"github.com/multica-ai/multica/server/internal/events"
+	"github.com/multica-ai/multica/server/internal/service"
 	db "github.com/multica-ai/multica/server/pkg/db/generated"
 )
+
+func TestReadyRecoveryCoordinatorDrainsBacklogInSingleTick(t *testing.T) {
+	remaining := 250
+	calls := 0
+	recoverReadyIssueAssignmentsWith(context.Background(), func(_ context.Context, limit int) (service.ReadyRecoveryResult, error) {
+		calls++
+		attempted := min(remaining, limit)
+		remaining -= attempted
+		return service.ReadyRecoveryResult{Attempted: attempted, Recovered: attempted}, nil
+	})
+	if remaining != 0 || calls != 3 {
+		t.Fatalf("single tick left %d ready issues after %d calls; want drained in 3 batches", remaining, calls)
+	}
+}
 
 // setupSweeperTestFixture creates an issue and a task in the given status with
 // timestamps old enough to trigger the sweeper. Returns (issueID, agentID, taskID).

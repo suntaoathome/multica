@@ -76,6 +76,10 @@ const (
 	chatFinalizeGraceSeconds = 60.0
 	// chatFinalizeBatchSize caps deferred finalizations per tick.
 	chatFinalizeBatchSize = 100
+	// readyRecoveryBatchSize bounds the number of missing issue-assignment
+	// controllers repaired per tick. With the 30s sweep interval, eligible work
+	// is recovered within the required 60s even when one tick races deployment.
+	readyRecoveryBatchSize = 100
 )
 
 // runRuntimeSweeper periodically marks runtimes as offline if their
@@ -102,8 +106,44 @@ func runRuntimeSweeper(ctx context.Context, queries *db.Queries, liveness handle
 			sweepStaleTasks(ctx, queries, taskSvc, bus)
 			sweepExpiredQueuedTasks(ctx, queries, taskSvc)
 			sweepDeferredChatFinalizations(ctx, queries, taskSvc)
+			recoverReadyIssueAssignments(ctx, taskSvc)
 			gcRuntimes(ctx, queries, bus)
 		}
+	}
+}
+
+func recoverReadyIssueAssignments(ctx context.Context, taskSvc *service.TaskService) {
+	if taskSvc == nil {
+		return
+	}
+	recoverReadyIssueAssignmentsWith(ctx, taskSvc.RecoverReadyIssueAssignments)
+}
+
+// recoverReadyIssueAssignmentsWith drains every batch in the same sweeper
+// tick. The batch size bounds transaction length, not recovery capacity, so a
+// backlog larger than 100 cannot push otherwise-ready work past the 60s SLO.
+func recoverReadyIssueAssignmentsWith(ctx context.Context, recover func(context.Context, int) (service.ReadyRecoveryResult, error)) {
+	var total service.ReadyRecoveryResult
+	for {
+		result, err := recover(ctx, readyRecoveryBatchSize)
+		if err != nil {
+			slog.Warn("ready recovery coordinator: scan failed", "error", err)
+			return
+		}
+		total.Attempted += result.Attempted
+		total.Recovered += result.Recovered
+		total.Contended += result.Contended
+		total.Failed += result.Failed
+		if result.Attempted < readyRecoveryBatchSize {
+			break
+		}
+	}
+	if total.Attempted > 0 {
+		slog.Info("ready recovery coordinator: pass complete",
+			"attempted", total.Attempted,
+			"recovered", total.Recovered,
+			"contended", total.Contended,
+			"failed", total.Failed)
 	}
 }
 
