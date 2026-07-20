@@ -39,7 +39,9 @@ import type {
   PinnedItem,
   PinnedItemType,
   Project,
+  ProjectOrchestrationSummary,
   ProjectResource,
+  OrchestrationRecoveryResponse,
   Reaction,
   ReorderPinsRequest,
   RuntimeDevice,
@@ -92,6 +94,8 @@ import {
   EMPTY_NOTIFICATION_PREFERENCES,
   EMPTY_PIN_LIST,
   EMPTY_PROJECT,
+  EMPTY_PROJECT_ORCHESTRATION_SUMMARY,
+  EMPTY_ORCHESTRATION_RECOVERY_RESPONSE,
   EMPTY_RUNTIME_LIST,
   EMPTY_SEARCH_ISSUES_RESPONSE,
   EMPTY_SEARCH_PROJECTS_RESPONSE,
@@ -107,6 +111,8 @@ import {
   PinListSchema,
   PinnedItemSchema,
   ProjectSchema,
+  ProjectOrchestrationSummarySchema,
+  OrchestrationRecoveryResponseSchema,
   RuntimeListSchema,
   SearchIssuesResponseSchema,
   SearchProjectsResponseSchema,
@@ -122,6 +128,10 @@ import { getCurrentSlug } from "./workspace-store";
 import { parseWithFallback } from "@/lib/parse-response";
 import { createRequestId } from "@/lib/request-id";
 import { getClientOS } from "@/lib/client-platform";
+import {
+  projectOrchestrationRecoveryRequest,
+  projectOrchestrationSummaryPath,
+} from "./project-orchestration-api";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -943,6 +953,36 @@ class ApiClient {
 
   async deleteProject(id: string): Promise<void> {
     await this.fetch<void>(`/api/projects/${id}`, { method: "DELETE" });
+  }
+
+  async getProjectOrchestrationSummary(
+    projectId: string,
+    opts?: { signal?: AbortSignal },
+  ): Promise<ProjectOrchestrationSummary> {
+    const raw = await this.fetch<unknown>(
+      projectOrchestrationSummaryPath(projectId),
+      { signal: opts?.signal },
+    );
+    return parseWithFallback(
+      raw,
+      ProjectOrchestrationSummarySchema,
+      EMPTY_PROJECT_ORCHESTRATION_SUMMARY,
+      { endpoint: "GET /api/projects/:id/orchestration-summary" },
+    );
+  }
+
+  async recoverProjectOrchestration(
+    projectId: string,
+    issueId: string,
+  ): Promise<OrchestrationRecoveryResponse> {
+    const request = projectOrchestrationRecoveryRequest(projectId, issueId);
+    const raw = await this.fetch<unknown>(request.path, request.init);
+    return parseWithFallback(
+      raw,
+      OrchestrationRecoveryResponseSchema,
+      EMPTY_ORCHESTRATION_RECOVERY_RESPONSE,
+      { endpoint: "POST /api/projects/:id/orchestration-recovery" },
+    );
   }
 
   // --- Project resources ---

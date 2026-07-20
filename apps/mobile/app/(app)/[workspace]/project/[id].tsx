@@ -33,8 +33,10 @@ import { ProjectHeaderCard } from "@/components/project/project-header-card";
 import { ProjectPropertiesSection } from "@/components/project/project-properties-section";
 import { ProjectRelatedIssues } from "@/components/project/project-related-issues";
 import { ProjectResourcesSection } from "@/components/project/project-resources-section";
+import { ProjectOrchestrationSection } from "@/components/project/project-orchestration-section";
 import {
   projectDetailOptions,
+  projectOrchestrationOptions,
   projectResourcesOptions,
 } from "@/data/queries/projects";
 import { issueKeys } from "@/data/queries/issue-keys";
@@ -44,6 +46,7 @@ import { useCreatePin, useDeletePin } from "@/data/mutations/pins";
 import { useAuthStore } from "@/data/auth-store";
 import { useProjectRealtime } from "@/data/realtime/use-project-realtime";
 import { useWorkspaceStore } from "@/data/workspace-store";
+import { memberListOptions } from "@/data/queries/members";
 
 export default function ProjectDetail() {
   const { showActionSheetWithOptions } = useActionSheet();
@@ -63,6 +66,7 @@ export default function ProjectDetail() {
     await Promise.all([
       detail.refetch(),
       qc.invalidateQueries({ queryKey: projectResourcesOptions(wsId, id).queryKey }),
+      qc.invalidateQueries({ queryKey: projectOrchestrationOptions(wsId, id).queryKey }),
       qc.invalidateQueries({
         queryKey: [...issueKeys.list(wsId), "byProject", id],
       }),
@@ -76,6 +80,9 @@ export default function ProjectDetail() {
   const projectMissing = !project || project.id === "";
 
   const userId = useAuthStore((s) => s.user?.id ?? null);
+  const { data: members = [] } = useQuery(memberListOptions(wsId));
+  const currentRole = members.find((member) => member.user_id === userId)?.role;
+  const isWorkspaceAdmin = currentRole === "owner" || currentRole === "admin";
   const { data: pins } = useQuery(pinListOptions(wsId, userId));
   const isPinned =
     !!project &&
@@ -229,6 +236,11 @@ export default function ProjectDetail() {
                   params: { workspace: wsSlug, id },
                 });
             }}
+          />
+          <ProjectOrchestrationSection
+            projectId={id}
+            wsId={wsId}
+            isWorkspaceAdmin={isWorkspaceAdmin}
           />
           <View className="h-3" />
           <ProjectRelatedIssues projectId={id} />

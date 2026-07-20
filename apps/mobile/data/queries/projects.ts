@@ -25,6 +25,8 @@ export const projectKeys = {
     [...projectKeys.all(wsId), "detail", id] as const,
   resources: (wsId: string | null, id: string) =>
     [...projectKeys.all(wsId), "detail", id, "resources"] as const,
+  orchestration: (wsId: string | null, id: string) =>
+    [...projectKeys.all(wsId), "orchestration", id] as const,
 };
 
 export const projectListOptions = (wsId: string | null) =>
@@ -52,6 +54,14 @@ export const projectResourcesOptions = (wsId: string | null, id: string) =>
       return res.resources;
     },
     enabled: !!wsId && !!id,
+  });
+
+export const projectOrchestrationOptions = (wsId: string | null, id: string) =>
+  queryOptions({
+    queryKey: projectKeys.orchestration(wsId, id),
+    queryFn: ({ signal }) => api.getProjectOrchestrationSummary(id, { signal }),
+    enabled: !!wsId && !!id,
+    refetchInterval: 30_000,
   });
 
 /**
