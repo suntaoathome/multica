@@ -46,6 +46,21 @@ export function useCreateProject() {
   });
 }
 
+export function useRecoverProjectOrchestration(projectId: string) {
+  const qc = useQueryClient();
+  const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
+
+  return useMutation({
+    mutationFn: (issueId: string) =>
+      api.recoverProjectOrchestration(projectId, issueId),
+    onSettled: () => {
+      qc.invalidateQueries({
+        queryKey: projectKeys.orchestration(wsId, projectId),
+      });
+    },
+  });
+}
+
 export function useUpdateProject(projectId: string) {
   const qc = useQueryClient();
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
