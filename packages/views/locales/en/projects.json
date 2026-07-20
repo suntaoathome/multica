@@ -81,6 +81,17 @@
     "toast_project_deleted": "Project deleted",
     "toast_move_issue_failed": "Failed to move issue"
   },
+  "orchestration": {
+    "title": "Orchestration", "loading": "Loading orchestration status", "error": "Orchestration status could not be loaded.",
+    "retry": "Try again", "refresh": "Check again", "refresh_hint": "Fetch the latest server status. This does not start or change any work.",
+    "active": "Active executions", "ready": "Ready tasks", "running_slots": "Running slots", "empty": "No issues are linked to this project yet.",
+    "last_event": "Last event: {{type}} · {{time}}", "no_event": "No event recorded", "issue_slots": "Slots {{running}} / {{capacity}}",
+    "recover": "Resume", "recovering": "Resuming…", "admin_only": "Only workspace owners and admins can resume stale work.",
+    "recovery_title": "Resume stale issue?", "confirm_recovery": "Resume issue", "cancel": "Cancel",
+    "recovery_applied": "Issue queued for recovery", "recovery_already_active": "An execution is already active", "recovery_failed": "Could not resume issue",
+    "issue_states": "Issue orchestration states", "candidates": "Next iteration candidates",
+    "classification": { "running": "Running", "ready": "Ready", "complete": "Completed", "waiting_external": "Waiting", "temporarily_not_ready": "Scheduled", "orchestration_fault": "Needs attention" }
+  },
   "resources": {
     "section_header": "Resources",
     "empty": "No resources attached.",
