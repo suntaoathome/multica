@@ -280,6 +280,34 @@ export interface AgentTask {
   parent_task_id?: string;
   /** 1-based attempt counter; >1 means this is a retry. */
   attempt?: number;
+  /** Server-authored execution explanation. Unknown codes remain displayable. */
+  execution_reason?: {
+    code: string;
+    message?: string;
+    since?: string;
+    owner_type?: string;
+    owner_id?: string;
+    evidence?: { kind: string; ref_id?: string; url?: string };
+  };
+  effective_max_concurrent_tasks?: number;
+  claimable?: boolean;
+  claim_blockers?: string[];
+  cancel_requested_at?: string;
+  cancel_requested_by?: string;
+  recovery_actions?: Array<{
+    type: string;
+    label?: string;
+    target?: string;
+    disabled_reason?: string;
+    retry_token?: string;
+  }>;
+  dispatch_history?: Array<{
+    type: string;
+    at: string;
+    actor_type?: string;
+    actor_id?: string;
+    message?: string;
+  }>;
   /** Set when an issue comment triggered this task (@mention or assignee comment). */
   trigger_comment_id?: string;
   /**

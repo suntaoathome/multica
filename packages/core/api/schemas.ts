@@ -763,6 +763,35 @@ const OptionalStringArraySchema = z.preprocess(
   z.array(z.string()).optional(),
 );
 
+const ExecutionReasonSchema = z.object({
+  code: z.string(),
+  message: z.string().optional(),
+  since: z.string().optional(),
+  owner_type: z.string().optional(),
+  owner_id: z.string().optional(),
+  evidence: z.object({
+    kind: z.string(),
+    ref_id: z.string().optional(),
+    url: z.string().optional(),
+  }).loose().optional(),
+}).loose();
+
+const RecoveryActionSchema = z.object({
+  type: z.string(),
+  label: z.string().optional(),
+  target: z.string().optional(),
+  disabled_reason: z.string().optional(),
+  retry_token: z.string().optional(),
+}).loose();
+
+const DispatchHistoryEntrySchema = z.object({
+  type: z.string(),
+  at: z.string(),
+  actor_type: z.string().optional(),
+  actor_id: z.string().optional(),
+  message: z.string().optional(),
+}).loose();
+
 export const AgentTaskSchema = z.object({
   id: z.string(),
   agent_id: z.string().default(""),
@@ -781,6 +810,14 @@ export const AgentTaskSchema = z.object({
   autopilot_run_id: z.string().optional(),
   parent_task_id: z.string().optional(),
   attempt: z.number().optional(),
+  execution_reason: ExecutionReasonSchema.optional(),
+  effective_max_concurrent_tasks: z.number().int().positive().optional(),
+  claimable: z.boolean().optional(),
+  claim_blockers: OptionalStringArraySchema,
+  cancel_requested_at: z.string().optional(),
+  cancel_requested_by: z.string().optional(),
+  recovery_actions: z.array(RecoveryActionSchema).catch([]).optional(),
+  dispatch_history: z.array(DispatchHistoryEntrySchema).catch([]).optional(),
   trigger_comment_id: z.string().optional(),
   // Coverage is additive display metadata. A mixed-version or partially
   // upgraded server must not make one malformed optional field erase the

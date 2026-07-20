@@ -566,7 +566,18 @@
       "cancel_failed_toast": "タスクをキャンセルできませんでした",
       "started_prefix": "{{when}} に開始",
       "dispatched_prefix": "{{when}} にディスパッチ",
-      "queued_prefix": "{{when}} に待機開始"
+      "queued_prefix": "{{when}} に待機開始",
+      "last_event": "最終イベント {{when}}",
+      "cancellation_pending": "キャンセル処理中",
+      "execution": {
+        "running": "実行中 {{count}}",
+        "running_capacity": "実行中 {{running}}/{{capacity}}",
+        "ready": "実行可能 · {{count}} 件待機中",
+        "waiting": "待機中",
+        "external": "外部依存待ち",
+        "failed": "失敗",
+        "idle": "アイドル"
+      }
     }
   },
   "char_counter": {

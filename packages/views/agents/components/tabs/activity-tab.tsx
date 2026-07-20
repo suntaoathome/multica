@@ -9,6 +9,8 @@ import {
   MessageSquare,
   Workflow,
   X,
+  Activity,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -29,6 +31,7 @@ import {
   type AgentActivity,
   agentTaskSnapshotOptions,
   agentTasksOptions,
+  deriveExecutionSummary,
   summarizeActivityWindow,
   useWorkspaceActivityMap,
 } from "@multica/core/agents";
@@ -297,6 +300,8 @@ function NowSection({
   agent: Agent;
 }) {
   const { t } = useT("agents");
+  const timeAgo = useTimeAgo();
+  const summary = deriveExecutionSummary(tasks);
   return (
     <Section
       title={t(($) => $.tab_body.activity.section_now)}
@@ -306,6 +311,22 @@ function NowSection({
           : t(($) => $.tab_body.activity.subtitle_active, { count: tasks.length })
       }
     >
+      <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/20 px-3 py-2" role="status" aria-live="polite">
+        <div className="flex min-w-0 items-center gap-2">
+          {summary.state === "failed" ? (
+            <AlertTriangle className="h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
+          ) : (
+            <Activity className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          )}
+          <div className="min-w-0">
+            <p className="text-sm font-medium">{executionSummaryLabel(summary, t)}</p>
+            {(summary.reasonMessage || summary.reasonCode) && (
+              <p className="break-words text-xs text-muted-foreground">{summary.reasonMessage ?? summary.reasonCode}</p>
+            )}
+          </div>
+        </div>
+        {summary.lastEventAt && <span className="text-xs text-muted-foreground">{t(($) => $.tab_body.activity.last_event, { when: timeAgo(summary.lastEventAt) })}</span>}
+      </div>
       {tasks.length === 0 ? (
         <EmptyText>{t(($) => $.tab_body.activity.empty_now)}</EmptyText>
       ) : (
@@ -532,6 +553,7 @@ function TaskRow({
   // (completed / failed / cancelled) hide the button entirely.
   const showCancel =
     timeMode === "active" &&
+    task.recovery_actions?.some((action) => action.type === "cancel_task" && !action.disabled_reason) === true &&
     (task.status === "queued" ||
       task.status === "dispatched" ||
       task.status === "running");
@@ -686,6 +708,12 @@ function TaskRow({
               <span className="text-destructive">{failureLabel}</span>
             </>
           )}
+          {task.execution_reason?.message && (
+            <><Sep /><span className="break-words">{task.execution_reason.message}</span></>
+          )}
+          {task.cancel_requested_at && (
+            <><Sep /><span>{t(($) => $.tab_body.activity.cancellation_pending)}</span></>
+          )}
           {/* Accountable member (MUL-4302 §9): whose behalf this run is on.
               A leading separator keeps the avatar on the same middot rhythm as
               the rest of the meta line instead of glued to the duration. The
@@ -789,6 +817,17 @@ function Sep() {
 
 type AgentsT = ReturnType<typeof useT<"agents">>["t"];
 type TimeAgoFn = (dateStr: string) => string;
+
+function executionSummaryLabel(summary: ReturnType<typeof deriveExecutionSummary>, t: AgentsT): string {
+  switch (summary.state) {
+    case "running": return summary.capacity ? t(($) => $.tab_body.activity.execution.running_capacity, { running: summary.running, capacity: summary.capacity }) : t(($) => $.tab_body.activity.execution.running, { count: summary.running });
+    case "ready": return t(($) => $.tab_body.activity.execution.ready, { count: summary.queued });
+    case "waiting": return t(($) => $.tab_body.activity.execution.waiting);
+    case "external": return t(($) => $.tab_body.activity.execution.external);
+    case "failed": return t(($) => $.tab_body.activity.execution.failed);
+    case "idle": return t(($) => $.tab_body.activity.execution.idle);
+  }
+}
 
 function taskStatusLabel(status: AgentTask["status"], t: AgentsT): string {
   switch (status) {
