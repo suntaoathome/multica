@@ -2891,7 +2891,7 @@ func (q *Queries) HasActiveTaskForIssueAndAgent(ctx context.Context, arg HasActi
 
 const hasPendingTaskForIssue = `-- name: HasPendingTaskForIssue :one
 SELECT count(*) > 0 AS has_pending FROM agent_task_queue
-WHERE issue_id = $1 AND status IN ('queued', 'dispatched')
+WHERE issue_id = $1 AND status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
 `
 
 // Returns true if there is a queued or dispatched (but not yet running) task for the issue.
@@ -2907,7 +2907,7 @@ func (q *Queries) HasPendingTaskForIssue(ctx context.Context, issueID pgtype.UUI
 
 const hasPendingTaskForIssueAndAgent = `-- name: HasPendingTaskForIssueAndAgent :one
 SELECT count(*) > 0 AS has_pending FROM agent_task_queue
-WHERE issue_id = $1 AND agent_id = $2 AND status IN ('queued', 'dispatched')
+WHERE issue_id = $1 AND agent_id = $2 AND status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
   AND (
     COALESCE($3::text, '') = ''
     OR context->>'head_sha' = $3::text
@@ -2941,7 +2941,7 @@ const hasPendingTaskForIssueAndAgentExcludingTriggerComment = `-- name: HasPendi
 SELECT count(*) > 0 AS has_pending FROM agent_task_queue
 WHERE issue_id = $1
   AND agent_id = $2
-  AND status IN ('queued', 'dispatched')
+  AND status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred')
   AND trigger_comment_id IS DISTINCT FROM $3::uuid
   AND (
     COALESCE($4::text, '') = ''

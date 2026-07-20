@@ -138,10 +138,10 @@ func (s *scenario) seedIssue(t *testing.T, status, assigneeType, assigneeID, par
 	num := s.nextIssueNum
 	s.nextIssueNum++
 	var (
-		id       string
-		aType    any = nil
-		aID      any = nil
-		parent   any = nil
+		id     string
+		aType  any = nil
+		aID    any = nil
+		parent any = nil
 	)
 	if assigneeType != "" {
 		aType = assigneeType
@@ -211,14 +211,11 @@ func assertSinglePendingAuthorPerIssueAgent(t *testing.T, pool *pgxpool.Pool, is
 	}
 }
 
-// assertAtMostOneActiveAuthorForIssue is the PRODUCT-level "单 Issue 单作者"
-// target across ALL agents, over the full in-flight set. This is NOT enforced
-// today (the unique index is per-(issue,agent) and excludes running) — M6 is
-// the Stage-2 target that flips this from documentation to enforcement.
+// assertAtMostOneActiveAuthorForIssue is the issue-wide execution invariant.
 func assertAtMostOneActiveAuthorForIssue(t *testing.T, pool *pgxpool.Pool, issueID string) {
 	t.Helper()
 	n := countTasks(t, pool,
-		`issue_id = $1 AND status IN ('queued','dispatched','running','waiting_local_directory')`,
+		`issue_id = $1 AND status IN ('queued','dispatched','running','waiting_local_directory','deferred')`,
 		issueID)
 	if n > 1 {
 		t.Errorf("single-active-author-per-issue violated for issue=%s: got %d in-flight rows across agents, want <=1",
