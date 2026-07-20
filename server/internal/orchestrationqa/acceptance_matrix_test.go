@@ -90,20 +90,13 @@ func TestAcceptanceMatrix(t *testing.T) {
 			t.Fatalf("expected unique_violation on 2nd queued child (single-author backstop), got: %v", err)
 		}
 
-		// Deferred hole: a 'deferred' retry child is OUTSIDE the index predicate,
-		// so it coexists with a queued author. Stage 2 must close this.
+		// Deferred retries participate in the same issue-wide fence.
 		_, derr := pool.Exec(context.Background(),
 			`INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, originator_user_id, accountable_user_id, originator_source)
 			 VALUES ($1,$2,$3,'deferred',$4,$4,'issue_assignment')`,
 			s.agentID, s.runtimeID, issue, s.userID)
-		if derr != nil {
-			t.Fatalf("seed deferred child: %v", derr)
-		}
-		deferredCoexists := countTasks(t, pool,
-			`issue_id=$1 AND agent_id=$2 AND status IN ('queued','deferred')`, issue, s.agentID)
-		if deferredCoexists >= 2 {
-			t.Logf("GAP confirmed: 'deferred' (%d rows w/ queued) is outside idx_one_pending_task_per_issue_agent; "+
-				"a backoff retry can coexist with a live author. Stage 2 should widen the predicate or add a guard.", deferredCoexists)
+		if !isUniqueViolation(derr) {
+			t.Fatalf("expected unique_violation on deferred retry while issue is active, got: %v", derr)
 		}
 	})
 
@@ -125,9 +118,7 @@ func TestAcceptanceMatrix(t *testing.T) {
 		assertSinglePendingAuthorPerIssueAgent(t, pool, issue, s.agentID)
 	})
 
-	// M6 — Reassign must leave one active author across ALL agents. Today it
-	// does not: reassign never cancels (MUL-4465), and the index is per-agent,
-	// so agent A (running) + agent B (queued) coexist. GAP — Stage 2 target.
+	// M6 — Reassign must leave one active author across ALL agents.
 	t.Run("M6_reassign_single_active_author", func(t *testing.T) {
 		s := seedBase(t, pool)
 		issue := s.seedIssue(t, "in_progress", "agent", s.agentID, "")
@@ -137,14 +128,14 @@ func TestAcceptanceMatrix(t *testing.T) {
 			`UPDATE issue SET assignee_id=$1 WHERE id=$2`, s.agentBID, issue); err != nil {
 			t.Fatalf("reassign: %v", err)
 		}
-		s.seedTask(t, issue, s.agentBID, "queued") // B's fresh author
-		inflight := countTasks(t, pool,
-			`issue_id=$1 AND status IN ('queued','dispatched','running','waiting_local_directory')`, issue)
-		t.Logf("GAP confirmed: %d concurrent in-flight authors on one issue after reassign (want 1). "+
-			"Reassign does not cancel the prior author (handler/issue.go:2781-2792) and the unique index is "+
-			"per-(issue,agent). Stage 2 must cancel-prior or add a per-issue active-author fence.", inflight)
-		t.Skip("GAP (Stage 2 / AI-107): single-active-author-per-issue not enforced across reassign. " +
-			"Un-skip and call assertAtMostOneActiveAuthorForIssue once the fence lands.")
+		_, err := pool.Exec(context.Background(),
+			`INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, originator_user_id, accountable_user_id, originator_source)
+			 VALUES ($1,$2,$3,'queued',$4,$4,'issue_assignment')`,
+			s.agentBID, s.runtimeID, issue, s.userID)
+		if !isUniqueViolation(err) {
+			t.Fatalf("expected issue-wide fence to reject reassigned author while prior task is running, got: %v", err)
+		}
+		assertAtMostOneActiveAuthorForIssue(t, pool, issue)
 	})
 
 	// M7 — Review fence: flipping to in_review does not enqueue a new author.

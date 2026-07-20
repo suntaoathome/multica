@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX CONCURRENTLY idx_one_active_task_per_issue ON agent_task_queue(issue_id) WHERE issue_id IS NOT NULL AND status IN ('queued', 'dispatched', 'running', 'waiting_local_directory', 'deferred');
