@@ -80,6 +80,13 @@
     "toast_project_deleted": "プロジェクトを削除しました",
     "toast_move_issue_failed": "イシューを移動できませんでした"
   },
+  "orchestration": {
+    "title": "オーケストレーション", "loading": "オーケストレーション状態を読み込み中", "error": "オーケストレーション状態を読み込めませんでした。",
+    "retry": "再試行", "refresh": "再確認", "refresh_hint": "最新のサーバー状態を取得します。作業の開始や変更は行いません。",
+    "active": "実行中", "ready": "準備完了タスク", "empty": "このプロジェクトにイシューはまだありません。",
+    "issue_states": "イシューのオーケストレーション状態", "candidates": "次のイテレーション候補",
+    "classification": { "ready": "準備完了", "complete": "完了", "waiting_external": "待機中", "temporarily_not_ready": "スケジュール済み", "orchestration_fault": "要確認" }
+  },
   "resources": {
     "section_header": "リソース",
     "empty": "添付されたリソースはありません。",

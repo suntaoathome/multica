@@ -81,6 +81,13 @@
     "toast_project_deleted": "Project deleted",
     "toast_move_issue_failed": "Failed to move issue"
   },
+  "orchestration": {
+    "title": "Orchestration", "loading": "Loading orchestration status", "error": "Orchestration status could not be loaded.",
+    "retry": "Try again", "refresh": "Check again", "refresh_hint": "Fetch the latest server status. This does not start or change any work.",
+    "active": "Active executions", "ready": "Ready tasks", "empty": "No issues are linked to this project yet.",
+    "issue_states": "Issue orchestration states", "candidates": "Next iteration candidates",
+    "classification": { "ready": "Ready", "complete": "Completed", "waiting_external": "Waiting", "temporarily_not_ready": "Scheduled", "orchestration_fault": "Needs attention" }
+  },
   "resources": {
     "section_header": "Resources",
     "empty": "No resources attached.",
