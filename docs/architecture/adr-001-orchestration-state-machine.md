@@ -105,6 +105,67 @@ Add `orchestration_ready_item` rather than deriving readiness from Issue status:
 
 `orchestration_execution` binds an aggregate generation to the concrete `agent_task_queue.id`, assignee snapshot, attempt, and terminal disposition (`succeeded`, `retryable_failed`, `terminal_failed`, `superseded`, `cancelled`). This preserves current task retry/session behavior while preventing old attempts from advancing new ownership.
 
+### Concurrent claim and terminal callback
+
+```mermaid
+sequenceDiagram
+    participant D1 as Daemon A
+    participant D2 as Daemon B
+    participant S as Orchestration service
+    participant DB as PostgreSQL
+    participant O as Outbox worker
+
+    par competing claims
+        D1->>S: claim(runtime A)
+        D2->>S: claim(runtime B)
+    end
+    S->>DB: BEGIN; SELECT due ready item<br/>FOR UPDATE SKIP LOCKED
+    DB-->>S: one winner; other claim skips row
+    S->>DB: compare aggregate phase/version/generation
+    S->>DB: INSERT task + execution;<br/>consume ready; phase=executing;<br/>INSERT event + outbox; COMMIT
+    S-->>D1: task + execution_id + generation + lease_token
+    O->>D1: at-least-once wake (optional duplicate)
+    D1->>S: terminal callback(tokens, result)
+    S->>DB: BEGIN; CAS task + execution lease/generation
+    alt current successful execution
+        S->>DB: terminalize execution; advance aggregate;<br/>INSERT next ready/review + event + outbox; COMMIT
+        S-->>D1: 200 stored result
+    else identical callback replay
+        S->>DB: read stored terminal fingerprint; ROLLBACK
+        S-->>D1: 200 stored result
+    else conflicting terminal replay
+        S->>DB: ROLLBACK
+        S-->>D1: 409 terminal conflict
+    end
+```
+
+The wake is only a latency hint. The ready row and claim transaction are the durable hand-off; a lost or duplicated wake cannot lose or duplicate execution.
+
+### Reassignment racing task completion
+
+```mermaid
+sequenceDiagram
+    participant M as Reassigning member
+    participant S as Orchestration service
+    participant DB as PostgreSQL
+    participant Old as Old daemon
+    participant New as New daemon
+
+    Old->>S: running execution E7, generation 7
+    M->>S: reassign(new agent, If-Match: v12)
+    S->>DB: BEGIN; lock aggregate;<br/>generation 7→8; E7=superseded;<br/>insert ready(g8,new agent) + outbox; COMMIT
+    par completion and new claim
+        Old->>S: complete(E7,g7,old lease)
+        New->>S: claim ready(g8)
+    end
+    S->>DB: record E7 attempt result;<br/>generation CAS fails for aggregate mutation
+    S-->>Old: 202 superseded
+    S->>DB: claim g8; create E8;<br/>phase=executing; COMMIT
+    S-->>New: execution E8, generation 8
+```
+
+The same fence applies to cancellation and review changes-requested. Process termination is best effort; the generation CAS is the correctness boundary.
+
 ### Parent progress and self-iteration
 
 Parent progress is a reducer projection, not a comment side effect:
@@ -184,14 +245,38 @@ Do not add database foreign keys per repository policy. Application services val
 
 Roll out behind workspace feature flag `authoritative_orchestration_v1`:
 
+### Compatibility-window projection contract
+
+Before the authority flip, legacy consumers still react to `issue.status`: notably `SyncRunFromIssue` completes an Autopilot run on `in_review` and fails it on `blocked`. Therefore the compatibility adapter MUST use this phase-aware projection, even though the final post-flip projection can be richer:
+
+| Aggregate phase/detail | Shadow / dual-write Issue projection (steps 2–4) | Legacy Autopilot projection (steps 2–4) | Post-authority projection (steps 5–6) |
+| --- | --- | --- | --- |
+| `planned` | `backlog` | no transition | `backlog` |
+| `ready` | `todo` | no transition | `todo` |
+| `executing` | `in_progress` | run stays active | `in_progress` |
+| `waiting:external_input/dependency/stage_gate/retry_backoff/runtime_capacity` | **`in_progress`**, with wait detail only in the orchestration API/event; never `blocked` | run stays active | `blocked` only for actionable external/dependency waits; otherwise `in_progress` |
+| `review` | **`in_progress`**, with review detail only in the orchestration API/event; never `in_review` | run stays active | `in_review` |
+| `completed` | `done` | run completes through existing `SyncRunFromIssue` | `done` |
+| `cancelled` | `cancelled` | run fails/cancels per existing contract | `cancelled` |
+| `faulted` | `blocked` with structured fault detail | run fails through existing `SyncRunFromIssue` | `blocked` with `orchestration_fault` detail |
+
+Normative compatibility rules:
+
+1. The adapter, not individual command handlers, owns all legacy projections. A command transaction writes aggregate state and the table entry above atomically.
+2. Steps 2–4 never project ordinary waits to `blocked` and never project review to `in_review`; doing so would prematurely fail or complete the legacy Autopilot run.
+3. Autopilot remains active during waits/review. Its new read model may expose `waiting_external` or `waiting_review`, but the persisted legacy run status stays `issue_created`/`running` until aggregate completion, cancellation, or fault.
+4. At step 5, first deploy a flag-aware `SyncRunFromIssue`: when `authoritative_orchestration_v1=true`, it ignores nonterminal Issue projections and consumes orchestration outbox events; flag-off workspaces retain current behavior. Only after that deployment may the adapter emit post-authority `blocked`/`in_review` projections.
+5. The authority flip is rejected if any enabled workspace has a legacy Autopilot consumer without the flag-aware guard, any unexplained projection divergence, or an undelivered orchestration outbox event older than the agreed SLO.
+6. Rollback from step 5 restores the shadow projection table **before** re-enabling legacy `SyncRunFromIssue`, then replays/deduplicates terminal events by `event_id`. This ordering prevents a review/wait row from being interpreted as legacy completion/failure during rollback.
+
 1. **Schema only:** aggregate/event/outbox/ready/execution/wait/review/candidate tables and concurrent indexes; no behavior change.
 2. **Shadow reducer:** backfill one aggregate per nonterminal issue using the deterministic precedence `active task > review > structured wait > queued/deferred task > issue terminal/status`. Log divergences; do not write Issue status.
 3. **Dual-write commands:** route Issue/task/Autopilot mutations through the reducer while continuing existing response fields and events. A transactional adapter writes legacy projections.
 4. **Read shadow:** expose orchestration API and metrics; compare board status, task activity, parent Stage, and Autopilot outcomes in Handoff staging.
-5. **Authority flip:** ready claiming and parent continuation read new tables. Legacy task APIs remain compatible and gain optional orchestration fields.
+5. **Authority flip:** deploy the flag-aware Autopilot consumer, then make ready claiming and parent continuation read new tables and switch the adapter to post-authority projections. Legacy task APIs remain compatible and gain optional orchestration fields.
 6. **Projection cleanup:** after at least one full retry/lease retention window with zero unexplained divergence, remove legacy side-effect paths; retain legacy columns as API projections until installed clients age out.
 
-Rollback before step 5 disables dual write and leaves legacy behavior intact. After step 5, rollback switches claims back only after draining/marking new ready items and projecting aggregate state to Issue/task rows. Event/outbox data is retained for audit; no destructive down migration is required.
+Rollback before step 5 disables dual write and leaves legacy behavior intact. After step 5, rollback first restores the compatibility projection contract, then switches claims back after draining/marking new ready items, and only then re-enables legacy Autopilot status consumption. Event/outbox data is retained for audit; no destructive down migration is required.
 
 ## Observability and SLOs
 
@@ -225,12 +310,16 @@ Each slice is independently reviewable and deployable behind the flag. No slice 
 - [ ] Concurrent activation/retry/reassign commands yield one live ready item and monotonic aggregate versions.
 - [ ] Duplicate HTTP commands, task callbacks, and events are safe; conflicting reuse is rejected.
 - [ ] Stale/superseded execution cannot move Issue, parent, project, or Autopilot state.
+- [ ] Competing claims produce one execution; lost/duplicate daemon wakes do not lose or duplicate work.
+- [ ] A completion racing reassignment is recorded but returns `202 superseded` and cannot advance the new generation.
 - [ ] Retry creation and parent Stage continuation commit atomically with terminal task handling.
 - [ ] Review author cannot approve their own deliverable; changes requested creates exactly one next generation.
 - [ ] External wait records owner, correlation, and deadline and resumes only from a matching wake.
 - [ ] Empty ready queue is classified as complete, external wait, temporary not-ready, or fault with no ambiguous fifth outcome.
 - [ ] Project completion creates at most one candidate per snapshot/policy version and never auto-approves it.
 - [ ] Handoff staging shadow mode reports zero unexplained divergence for the agreed observation window.
+- [ ] In compatibility mode, waits/review remain `in_progress`; legacy Autopilot runs neither fail on waits nor complete on review.
+- [ ] Authority-flip and rollback rehearsals apply the flag-aware Autopilot consumer and projection ordering specified above.
 - [ ] Rollback rehearsal restores legacy claiming without losing or duplicating accepted work.
 
 ## Consequences and risks
