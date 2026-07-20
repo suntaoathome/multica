@@ -741,6 +741,17 @@ type NotificationPreference struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type OrchestrationAuditEvent struct {
+	ID          pgtype.UUID        `json:"id"`
+	WorkspaceID pgtype.UUID        `json:"workspace_id"`
+	ProjectID   pgtype.UUID        `json:"project_id"`
+	IssueID     pgtype.UUID        `json:"issue_id"`
+	EventType   string             `json:"event_type"`
+	ReasonCode  string             `json:"reason_code"`
+	Payload     []byte             `json:"payload"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
 type PersonalAccessToken struct {
 	ID          pgtype.UUID        `json:"id"`
 	UserID      pgtype.UUID        `json:"user_id"`
@@ -804,6 +815,19 @@ type RuntimeProfile struct {
 	Enabled        bool               `json:"enabled"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type SelfIterationCandidate struct {
+	ID            pgtype.UUID        `json:"id"`
+	WorkspaceID   pgtype.UUID        `json:"workspace_id"`
+	ProjectID     pgtype.UUID        `json:"project_id"`
+	SnapshotHash  string             `json:"snapshot_hash"`
+	PolicyVersion int32              `json:"policy_version"`
+	State         string             `json:"state"`
+	Title         string             `json:"title"`
+	Reason        string             `json:"reason"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Skill struct {
