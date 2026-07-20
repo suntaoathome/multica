@@ -121,22 +121,28 @@ func TestAcceptanceMatrix(t *testing.T) {
 		}
 	})
 
-	// M5 — A comment must not create a second author; the DB backstop is the
-	// same unique index (the service path coalesces into the single queued row).
+	// M5 — A comment must not create a second author. The service path coalesces
+	// the comment into the existing controller, while the DB backstop identifies
+	// assignment controllers by trigger_evidence_kind (not originator_source).
 	t.Run("M5_comment_no_second_author", func(t *testing.T) {
 		s := seedBase(t, pool)
 		issue := s.seedIssue(t, "in_progress", "agent", s.agentID, "")
 		s.seedTask(t, issue, s.agentID, "queued")
-		// A comment-triggered path that tried to insert a fresh queued task
-		// (instead of merging) would hit the unique index — proving the backstop.
+		// A comment-sourced assignment controller is still rejected because its
+		// trigger evidence identifies it as an issue-assignment controller.
 		_, err := pool.Exec(context.Background(),
 			`INSERT INTO agent_task_queue (agent_id, runtime_id, issue_id, status, originator_user_id, accountable_user_id, originator_source, trigger_evidence_kind)
 			 VALUES ($1,$2,$3,'queued',$4,$4,'comment_source','issue_assignment')`,
 			s.agentID, s.runtimeID, issue, s.userID)
 		if !isUniqueViolation(err) {
-			t.Fatalf("expected unique_violation guarding against a 2nd comment-triggered author, got: %v", err)
+			t.Fatalf("expected unique_violation guarding against a 2nd issue-assignment author, got: %v", err)
 		}
-		assertSinglePendingAuthorPerIssueAgent(t, pool, issue, s.agentID)
+		// The service-layer coalescing keeps this at one controller.
+		if got := countTasks(t, pool,
+			`issue_id=$1 AND trigger_comment_id IS NULL AND is_leader_task=false AND trigger_evidence_kind='issue_assignment'
+			 AND status IN ('queued','dispatched','running','waiting_local_directory','deferred')`, issue); got != 1 {
+			t.Fatalf("comment must not add a 2nd issue-assignment author, want 1 controller, got %d", got)
+		}
 	})
 
 	// M6 — Reassign must leave one active author across ALL agents.
