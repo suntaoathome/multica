@@ -28,7 +28,9 @@ import type {
   MemberWithUser,
   PinnedItem,
   Project,
+  ProjectOrchestrationSummary,
   ProjectResource,
+  OrchestrationRecoveryResponse,
   RuntimeDevice,
   SearchIssuesResponse,
   SearchProjectsResponse,
@@ -207,6 +209,73 @@ export const EMPTY_PROJECT: Project = {
   issue_count: 0,
   done_count: 0,
   resource_count: 0,
+};
+
+const OrchestrationReasonSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+}).loose();
+
+const OrchestrationEventSchema = z.object({
+  type: z.string(),
+  reason_code: z.string(),
+  created_at: z.string(),
+}).loose();
+
+export const ProjectOrchestrationSummarySchema: z.ZodType<ProjectOrchestrationSummary> = z.object({
+  project_id: z.string(),
+  classification: z.enum(["running", "ready", "complete", "waiting_external", "temporarily_not_ready", "orchestration_fault"]),
+  reason: OrchestrationReasonSchema,
+  issues: z.array(z.object({
+    issue_id: z.string(),
+    issue_status: z.string(),
+    execution_state: z.enum(["running", "ready", "waiting", "temporarily_not_ready", "faulted", "complete"]),
+    reason: OrchestrationReasonSchema,
+    active_tasks: z.number().default(0),
+    ready_tasks: z.number().default(0),
+    running_slots: z.number().default(0),
+    capacity: z.number().default(0),
+    last_event: OrchestrationEventSchema.nullish(),
+    recovery_action: z.object({
+      action: z.literal("resume_stale_issue"),
+      allowed: z.boolean(),
+      reason: z.string(),
+      side_effect: z.string(),
+    }).loose().nullish(),
+  }).loose()).default([]),
+  self_iteration_candidates: z.array(z.object({
+    id: z.string(),
+    snapshot_hash: z.string(),
+    policy_version: z.number(),
+    state: z.enum(["proposed", "accepted", "rejected", "superseded"]),
+    title: z.string(),
+    reason: z.string(),
+    created_at: z.string(),
+  }).loose()).default([]),
+  running_slots: z.number().default(0),
+  capacity: z.number().default(0),
+  last_event: OrchestrationEventSchema.nullish(),
+}).loose();
+
+export const EMPTY_PROJECT_ORCHESTRATION_SUMMARY: ProjectOrchestrationSummary = {
+  project_id: "",
+  classification: "temporarily_not_ready",
+  reason: { code: "invalid_response", message: "Orchestration status is unavailable." },
+  issues: [],
+  self_iteration_candidates: [],
+  running_slots: 0,
+  capacity: 0,
+  last_event: null,
+};
+
+export const OrchestrationRecoveryResponseSchema: z.ZodType<OrchestrationRecoveryResponse> = z.object({
+  applied: z.boolean(),
+  reason: z.string(),
+}).loose();
+
+export const EMPTY_ORCHESTRATION_RECOVERY_RESPONSE: OrchestrationRecoveryResponse = {
+  applied: false,
+  reason: "invalid_response",
 };
 
 // Project resources are typed pointers to external resources (today: GitHub

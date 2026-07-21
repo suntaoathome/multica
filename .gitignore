@@ -70,3 +70,5 @@ data/
 .kilo
 .idea
 .gstack/
+# Local process-level QA evidence (may include disposable binaries/logs).
+/artifacts/
