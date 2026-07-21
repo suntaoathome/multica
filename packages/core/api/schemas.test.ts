@@ -943,6 +943,21 @@ describe("AutopilotRunSchema", () => {
     expect(parsed.reason_code).toBeUndefined();
   });
 
+  it("preserves structured failure recovery fields and tolerates older servers", () => {
+    const structured = parseWithFallback(
+      { ...baseRun, failure_class: "codex_initialize_timeout", recovery_action: "awaiting_schedule" },
+      AutopilotRunSchema,
+      FALLBACK_AUTOPILOT_RUN,
+      ENDPOINT,
+    );
+    expect(structured.failure_class).toBe("codex_initialize_timeout");
+    expect(structured.recovery_action).toBe("awaiting_schedule");
+
+    const legacy = parseWithFallback(baseRun, AutopilotRunSchema, FALLBACK_AUTOPILOT_RUN, ENDPOINT);
+    expect(legacy.failure_class).toBeUndefined();
+    expect(legacy.recovery_action).toBeUndefined();
+  });
+
   it("degrades a malformed response to a non-success fallback (never a false success)", () => {
     const parsed = parseWithFallback("not-an-object", AutopilotRunSchema, FALLBACK_AUTOPILOT_RUN, ENDPOINT);
     expect(parsed).toBe(FALLBACK_AUTOPILOT_RUN);

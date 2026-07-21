@@ -322,7 +322,9 @@ RETURNING *;
 
 -- name: UpdateAutopilotRunFailed :one
 UPDATE autopilot_run
-SET status = 'failed', completed_at = now(), failure_reason = $2
+SET status = 'failed', completed_at = now(), failure_reason = $2,
+    failure_class = sqlc.narg('failure_class'),
+    recovery_action = sqlc.narg('recovery_action')
 WHERE id = $1
 RETURNING *;
 

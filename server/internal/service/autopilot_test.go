@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/multica-ai/multica/server/pkg/agent"
 	db "github.com/multica-ai/multica/server/pkg/db/generated"
 )
 
@@ -61,6 +62,41 @@ func TestTaskFailureReasonForAutopilotRun(t *testing.T) {
 				t.Fatalf("taskFailureReasonForAutopilotRun() = %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestRecoveryActionForAutopilotTask(t *testing.T) {
+	task := db.AgentTaskQueue{FailureReason: pgtype.Text{String: "codex_initialize_timeout", Valid: true}}
+	if got := recoveryActionForAutopilotTask(task); got != "awaiting_schedule" {
+		t.Fatalf("recoveryActionForAutopilotTask() = %q, want awaiting_schedule", got)
+	}
+	task.FailureReason.String = "agent_error.process_failure"
+	if got := recoveryActionForAutopilotTask(task); got != "none" {
+		t.Fatalf("recoveryActionForAutopilotTask() = %q, want none", got)
+	}
+}
+
+func TestCodexInitializeTimeoutRetryBoundary(t *testing.T) {
+	if !retryableReasons["codex_initialize_timeout"] {
+		t.Fatal("codex initialize timeout must be retryable for linked tasks")
+	}
+	runOnly := db.AgentTaskQueue{
+		AutopilotRunID: pgtype.UUID{Valid: true},
+		IssueID:        pgtype.UUID{Valid: true},
+		Attempt:        1,
+		MaxAttempts:    2,
+	}
+	if retryEligible("codex_initialize_timeout", "", runOnly) {
+		t.Fatal("run_only autopilot task must not enter server task retry")
+	}
+	linked := db.AgentTaskQueue{IssueID: pgtype.UUID{Valid: true}, Attempt: 1, MaxAttempts: 2}
+	if !retryEligible("codex_initialize_timeout", "", linked) {
+		t.Fatal("cleanup-confirmed linked task must remain eligible for bounded retry")
+	}
+	for _, marker := range []string{agent.CodexCleanupNotConfirmedMarker, agent.CodexPlatformCleanupUnsupportedMarker} {
+		if retryEligible("codex_initialize_timeout", marker, linked) {
+			t.Fatalf("cleanup-suppressed linked task %q must not enter server task retry", marker)
+		}
 	}
 }
 

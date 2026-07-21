@@ -226,3 +226,22 @@ func TestClassifyResumeUnsafeTimeout(t *testing.T) {
 		})
 	}
 }
+
+func TestClassifyCodexInitializeTimeout(t *testing.T) {
+	reason, ok := classifyCodexInitializeTimeout("codex", "codex initialize failed: "+agent.CodexHandshakeTimeoutMarker+": initialize did not respond after 30s")
+	if !ok || reason != FailureReasonCodexInitializeTimeout {
+		t.Fatalf("classification = (%q, %v), want (%q, true)", reason, ok, FailureReasonCodexInitializeTimeout)
+	}
+	if _, ok := classifyCodexInitializeTimeout("claude", agent.CodexHandshakeTimeoutMarker); ok {
+		t.Fatal("non-Codex provider must not be classified")
+	}
+	if _, ok := classifyCodexInitializeTimeout("codex", agent.CodexHandshakeTimeoutMarker+": thread/start did not respond after 30s"); ok {
+		t.Fatal("non-initialize handshake timeout must not be classified")
+	}
+	for _, marker := range []string{agent.CodexCleanupNotConfirmedMarker, agent.CodexPlatformCleanupUnsupportedMarker} {
+		errMsg := "codex initialize failed: " + agent.CodexHandshakeTimeoutMarker + ": initialize did not respond after 30s; " + marker
+		if _, ok := classifyCodexInitializeTimeout("codex", errMsg); ok {
+			t.Fatalf("cleanup-suppressed timeout %q must not be classified as retryable", marker)
+		}
+	}
+}

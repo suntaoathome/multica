@@ -93,6 +93,14 @@ const CodexFirstTurnNoProgressMarker = "codex app-server no progress timeout"
 // did not answer within the bounded handshake window.
 const CodexHandshakeTimeoutMarker = "codex app-server handshake timeout"
 
+// These markers make cleanup failures machine-readable across the daemon and
+// server retry boundary. A timed-out process must never be replaced until its
+// process tree is confirmed gone.
+const (
+	CodexCleanupNotConfirmedMarker        = "retry suppressed: process cleanup/reap not confirmed"
+	CodexPlatformCleanupUnsupportedMarker = "retry suppressed: process-tree cleanup cannot be confirmed on this platform"
+)
+
 const codexModelCatalogRefreshTimeoutSignal = "failed to refresh available models: timeout waiting for child process to exit"
 
 var errCodexProcessExited = errors.New("codex process exited")
@@ -993,9 +1001,9 @@ func (b *codexBackend) executeOnce(ctx context.Context, prompt string, opts Exec
 			var handshakeErr *codexHandshakeTimeoutError
 			retrySafe := errors.As(err, &handshakeErr) && handshakeErr.Method == "initialize" && !semanticObserved.Load() && cleanupConfirmed && codexInitializeRetrySupported()
 			if errors.As(err, &handshakeErr) && handshakeErr.Method == "initialize" && !cleanupConfirmed {
-				finalError += "; retry suppressed: process cleanup/reap not confirmed"
+				finalError += "; " + CodexCleanupNotConfirmedMarker
 			} else if errors.As(err, &handshakeErr) && handshakeErr.Method == "initialize" && cleanupConfirmed && !codexInitializeRetrySupported() {
-				finalError += "; retry suppressed: process-tree cleanup cannot be confirmed on this platform"
+				finalError += "; " + CodexPlatformCleanupUnsupportedMarker
 			}
 			b.cfg.Logger.Warn("codex lifecycle", "phase", "initialize_failure", "task_id", b.cfg.TaskID, "runtime_id", b.cfg.RuntimeID, "pid", cmd.Process.Pid, "attempt", attempt, "latency", initializeLatency.Round(time.Millisecond).String(), "semantic_activity", semanticObserved.Load(), "cleanup_confirmed", cleanupConfirmed, "retry_safe", retrySafe)
 			resCh <- Result{Status: finalStatus, Error: finalError, DurationMs: time.Since(startTime).Milliseconds(), codexInitializeRetrySafe: retrySafe}

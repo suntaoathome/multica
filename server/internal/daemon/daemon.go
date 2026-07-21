@@ -4605,8 +4605,11 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, slot i
 		// conversation permanently blocks the issue: every follow-up
 		// task resumes the same poisoned session and hits the same 400.
 		failureReason, _ := classifyPoisonedError(errMsg)
+		if failureReason == "" {
+			failureReason, _ = classifyCodexInitializeTimeout(provider, errMsg)
+		}
 		if failureReason != "" {
-			taskLog.Warn("agent failed with poisoned API error, classifying as blocked",
+			taskLog.Warn("agent failure received dedicated classification",
 				"failure_reason", failureReason,
 			)
 		} else {

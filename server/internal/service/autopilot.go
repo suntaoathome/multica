@@ -986,8 +986,9 @@ func (s *AutopilotService) SyncRunFromIssue(ctx context.Context, issue db.Issue)
 	case "cancelled", "blocked":
 		reason := "issue " + issue.Status
 		updatedRun, err := s.Queries.UpdateAutopilotRunFailed(ctx, db.UpdateAutopilotRunFailedParams{
-			ID:            run.ID,
-			FailureReason: pgtype.Text{String: reason, Valid: true},
+			ID:             run.ID,
+			FailureReason:  pgtype.Text{String: reason, Valid: true},
+			RecoveryAction: pgtype.Text{String: "none", Valid: true},
 		})
 		if err != nil {
 			slog.Warn("failed to fail autopilot run", "run_id", util.UUIDToString(run.ID), "error", err)
@@ -1033,8 +1034,10 @@ func (s *AutopilotService) SyncRunFromTask(ctx context.Context, task db.AgentTas
 			reason = task.Error.String
 		}
 		updatedRun, err := s.Queries.UpdateAutopilotRunFailed(ctx, db.UpdateAutopilotRunFailedParams{
-			ID:            run.ID,
-			FailureReason: pgtype.Text{String: reason, Valid: true},
+			ID:             run.ID,
+			FailureReason:  pgtype.Text{String: reason, Valid: true},
+			FailureClass:   task.FailureReason,
+			RecoveryAction: pgtype.Text{String: recoveryActionForAutopilotTask(task), Valid: true},
 		})
 		if err != nil {
 			slog.Warn("failed to fail autopilot run from task", "run_id", util.UUIDToString(run.ID), "error", err)
@@ -1092,8 +1095,10 @@ func (s *AutopilotService) SyncRunFromLinkedIssueTask(ctx context.Context, task 
 
 	reason := taskFailureReasonForAutopilotRun(task)
 	updatedRun, err := s.Queries.UpdateAutopilotRunFailed(ctx, db.UpdateAutopilotRunFailedParams{
-		ID:            run.ID,
-		FailureReason: pgtype.Text{String: reason, Valid: reason != ""},
+		ID:             run.ID,
+		FailureReason:  pgtype.Text{String: reason, Valid: reason != ""},
+		FailureClass:   task.FailureReason,
+		RecoveryAction: pgtype.Text{String: "none", Valid: true},
 	})
 	if err != nil {
 		slog.Warn("failed to fail autopilot run from linked issue task",
@@ -1116,6 +1121,15 @@ func taskFailureReasonForAutopilotRun(task db.AgentTaskQueue) string {
 		return task.FailureReason.String
 	}
 	return "task failed"
+}
+
+func recoveryActionForAutopilotTask(task db.AgentTaskQueue) string {
+	if task.FailureReason.Valid && task.FailureReason.String == "codex_initialize_timeout" {
+		// run_only tasks are deliberately excluded from server task requeue;
+		// the next bounded recovery opportunity is the next scheduler tick.
+		return "awaiting_schedule"
+	}
+	return "none"
 }
 
 // handleDispatchSkip recognises an errDispatchSkipped returned from a
@@ -1161,8 +1175,9 @@ func (s *AutopilotService) handleDispatchSkip(ctx context.Context, ap db.Autopil
 
 func (s *AutopilotService) failRun(ctx context.Context, runID pgtype.UUID, reason string) {
 	if _, err := s.Queries.UpdateAutopilotRunFailed(ctx, db.UpdateAutopilotRunFailedParams{
-		ID:            runID,
-		FailureReason: pgtype.Text{String: reason, Valid: true},
+		ID:             runID,
+		FailureReason:  pgtype.Text{String: reason, Valid: true},
+		RecoveryAction: pgtype.Text{String: "none", Valid: true},
 	}); err != nil {
 		slog.Warn("failed to mark autopilot run as failed", "run_id", util.UUIDToString(runID), "error", err)
 	}

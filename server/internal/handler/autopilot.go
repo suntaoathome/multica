@@ -142,16 +142,18 @@ type AutopilotTriggerResponse struct {
 }
 
 type AutopilotRunResponse struct {
-	ID            string  `json:"id"`
-	AutopilotID   string  `json:"autopilot_id"`
-	TriggerID     *string `json:"trigger_id"`
-	Source        string  `json:"source"`
-	Status        string  `json:"status"`
-	IssueID       *string `json:"issue_id"`
-	TaskID        *string `json:"task_id"`
-	TriggeredAt   string  `json:"triggered_at"`
-	CompletedAt   *string `json:"completed_at"`
-	FailureReason *string `json:"failure_reason"`
+	ID             string  `json:"id"`
+	AutopilotID    string  `json:"autopilot_id"`
+	TriggerID      *string `json:"trigger_id"`
+	Source         string  `json:"source"`
+	Status         string  `json:"status"`
+	IssueID        *string `json:"issue_id"`
+	TaskID         *string `json:"task_id"`
+	TriggeredAt    string  `json:"triggered_at"`
+	CompletedAt    *string `json:"completed_at"`
+	FailureReason  *string `json:"failure_reason"`
+	FailureClass   *string `json:"failure_class,omitempty"`
+	RecoveryAction *string `json:"recovery_action,omitempty"`
 	// ReasonCode is a stable, localizable, enumeration-safe classification of a
 	// non-success run (skipped/failed), derived from FailureReason. The "run now"
 	// UI localizes it instead of echoing the raw English reason (which may name a
@@ -275,16 +277,18 @@ func runToResponse(r db.AutopilotRun) AutopilotRunResponse {
 		json.Unmarshal(r.Result, &result)
 	}
 	return AutopilotRunResponse{
-		ID:            uuidToString(r.ID),
-		AutopilotID:   uuidToString(r.AutopilotID),
-		TriggerID:     uuidToPtr(r.TriggerID),
-		Source:        r.Source,
-		Status:        r.Status,
-		IssueID:       uuidToPtr(r.IssueID),
-		TaskID:        uuidToPtr(r.TaskID),
-		TriggeredAt:   timestampToString(r.TriggeredAt),
-		CompletedAt:   timestampToPtr(r.CompletedAt),
-		FailureReason: textToPtr(r.FailureReason),
+		ID:             uuidToString(r.ID),
+		AutopilotID:    uuidToString(r.AutopilotID),
+		TriggerID:      uuidToPtr(r.TriggerID),
+		Source:         r.Source,
+		Status:         r.Status,
+		IssueID:        uuidToPtr(r.IssueID),
+		TaskID:         uuidToPtr(r.TaskID),
+		TriggeredAt:    timestampToString(r.TriggeredAt),
+		CompletedAt:    timestampToPtr(r.CompletedAt),
+		FailureReason:  textToPtr(r.FailureReason),
+		FailureClass:   textToPtr(r.FailureClass),
+		RecoveryAction: textToPtr(r.RecoveryAction),
 		// ReasonCode is left unset here: it is a decision-time value the manual
 		// "run now" handler injects from the typed dispatch outcome (MUL-4525).
 		// Persisted rows (list/history) surface the human failure_reason instead

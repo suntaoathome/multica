@@ -38,6 +38,7 @@ const (
 	FailureReasonAgentFallbackMsg        = "agent_fallback_message"
 	FailureReasonAPIInvalidRequest       = string(taskfailure.ReasonAPIInvalidRequest)
 	FailureReasonCodexSemanticInactivity = "codex_semantic_inactivity"
+	FailureReasonCodexInitializeTimeout  = "codex_initialize_timeout"
 )
 
 // poisonedOutputMaxLen caps how long an output can be and still be
@@ -61,6 +62,26 @@ var poisonedMarkers = []struct {
 }{
 	{"i reached the iteration limit", FailureReasonIterationLimit},
 	{"put your final update inside the content string", FailureReasonAgentFallbackMsg},
+}
+
+// classifyCodexInitializeTimeout identifies the typed Codex handshake marker
+// before the generic classifier can collapse the wrapped initialize error into
+// agent_error.process_failure. It is resume-safe: initialize has not created a
+// conversation or sent a business prompt yet.
+func classifyCodexInitializeTimeout(provider, errMsg string) (string, bool) {
+	if strings.ToLower(strings.TrimSpace(provider)) != "codex" || errMsg == "" {
+		return "", false
+	}
+	lowered := strings.ToLower(errMsg)
+	if strings.Contains(lowered, strings.ToLower(agent.CodexCleanupNotConfirmedMarker)) ||
+		strings.Contains(lowered, strings.ToLower(agent.CodexPlatformCleanupUnsupportedMarker)) {
+		return "", false
+	}
+	if strings.Contains(lowered, strings.ToLower(agent.CodexHandshakeTimeoutMarker)) &&
+		strings.Contains(lowered, "initialize did not respond") {
+		return FailureReasonCodexInitializeTimeout, true
+	}
+	return "", false
 }
 
 // classifyPoisonedOutput reports whether output matches a known agent

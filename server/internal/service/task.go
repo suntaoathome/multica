@@ -22,6 +22,7 @@ import (
 	"github.com/multica-ai/multica/server/internal/realtime"
 	"github.com/multica-ai/multica/server/internal/runtimeapps"
 	"github.com/multica-ai/multica/server/internal/util"
+	"github.com/multica-ai/multica/server/pkg/agent"
 	db "github.com/multica-ai/multica/server/pkg/db/generated"
 	"github.com/multica-ai/multica/server/pkg/featureflag"
 	"github.com/multica-ai/multica/server/pkg/protocol"
@@ -2933,7 +2934,7 @@ func (s *TaskService) FailTask(ctx context.Context, taskID pgtype.UUID, errMsg, 
 		if parent, perr := s.Queries.GetAgentTask(ctx, taskID); perr != nil {
 			slog.Warn("fail task auto-retry: load parent failed",
 				"task_id", util.UUIDToString(taskID), "error", perr)
-		} else if retryEligible(failureReason, parent) {
+		} else if retryEligible(failureReason, errMsg, parent) {
 			wantRetry = true
 			// Persist the reason-aware effective budget into the child so the
 			// retry chain self-describes (e.g. provider_network → max_attempts=3),
@@ -3126,6 +3127,7 @@ var retryableReasons = map[string]bool{
 	"runtime_recovery":          true,
 	"timeout":                   true,
 	"codex_semantic_inactivity": true,
+	"codex_initialize_timeout":  true,
 	string(taskfailure.ReasonAgentProviderNetwork): true,
 }
 
@@ -3214,11 +3216,18 @@ func ResumeUnsafeFailure(failureReason, errorText string) bool {
 // not an autopilot run, and linked to an issue or chat session. Shared by
 // FailTask's in-transaction retry and the orphan sweeper's MaybeRetryFailedTask
 // so both agree on which failures re-run.
-func retryEligible(failureReason string, t db.AgentTaskQueue) bool {
+func retryEligible(failureReason, errMsg string, t db.AgentTaskQueue) bool {
 	return retryableReasons[failureReason] &&
+		!codexCleanupRetrySuppressed(errMsg) &&
 		t.Attempt < retryAttemptCeiling(failureReason, t.MaxAttempts) &&
 		!t.AutopilotRunID.Valid &&
 		(t.IssueID.Valid || t.ChatSessionID.Valid)
+}
+
+func codexCleanupRetrySuppressed(errMsg string) bool {
+	lowered := strings.ToLower(errMsg)
+	return strings.Contains(lowered, strings.ToLower(agent.CodexCleanupNotConfirmedMarker)) ||
+		strings.Contains(lowered, strings.ToLower(agent.CodexPlatformCleanupUnsupportedMarker))
 }
 
 // MaybeRetryFailedTask spawns a fresh queued attempt for a recently-failed
@@ -3259,7 +3268,11 @@ func (s *TaskService) MaybeRetryFailedTask(ctx context.Context, parent db.AgentT
 	// Autopilot has its own retry semantics (don't double-trigger) and a task
 	// with no issue/chat link has nowhere to report its retry — retryEligible
 	// covers both, keeping this sweeper path in sync with FailTask's in-tx retry.
-	if !retryEligible(reason, parent) {
+	errMsg := ""
+	if parent.Error.Valid {
+		errMsg = parent.Error.String
+	}
+	if !retryEligible(reason, errMsg, parent) {
 		return nil, nil
 	}
 

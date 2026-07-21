@@ -226,6 +226,69 @@ func TestWebhookHandler_EmptyFiltersAllowsAll(t *testing.T) {
 	}
 }
 
+// TestListAutopilotRunsReadsFailureRecoveryFields guards the migration 206
+// column order at the sqlc runtime boundary. A generated rows.Scan that omits
+// either nullable column compiles but fails when the run history is queried.
+func TestListAutopilotRunsReadsFailureRecoveryFields(t *testing.T) {
+	agentID := createWebhookTestAgent(t, "Run Failure Fields Agent")
+	apID := createWebhookTestAutopilot(t, agentID, "active", "run_only")
+	ctx := context.Background()
+	tx, err := testPool.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin migration test transaction: %v", err)
+	}
+	t.Cleanup(func() { _ = tx.Rollback(context.Background()) })
+
+	var migrated bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.columns
+			WHERE table_schema = current_schema()
+			  AND table_name = 'autopilot_run'
+			  AND column_name = 'failure_class'
+		)
+	`).Scan(&migrated); err != nil {
+		t.Fatalf("inspect migration 206 state: %v", err)
+	}
+	if !migrated {
+		if _, err := tx.Exec(ctx, `
+			ALTER TABLE autopilot_run
+				ADD COLUMN failure_class TEXT,
+				ADD COLUMN recovery_action TEXT
+		`); err != nil {
+			t.Fatalf("apply migration 206 in test transaction: %v", err)
+		}
+	}
+
+	var runID string
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO autopilot_run (
+			autopilot_id, source, status, failure_reason, failure_class, recovery_action
+		) VALUES ($1, 'manual', 'failed', 'initialize timeout', 'codex_initialize_timeout', 'awaiting_schedule')
+		RETURNING id
+	`, apID).Scan(&runID); err != nil {
+		t.Fatalf("insert migrated autopilot run: %v", err)
+	}
+
+	runs, err := db.New(tx).ListAutopilotRuns(ctx, db.ListAutopilotRunsParams{
+		AutopilotID: parseUUID(apID),
+		Limit:       10,
+		Offset:      0,
+	})
+	if err != nil {
+		t.Fatalf("list migrated autopilot runs: %v", err)
+	}
+	if len(runs) != 1 {
+		t.Fatalf("run count = %d, want 1", len(runs))
+	}
+	if got := runs[0].FailureClass; !got.Valid || got.String != "codex_initialize_timeout" {
+		t.Fatalf("failure_class = %#v, want codex_initialize_timeout", got)
+	}
+	if got := runs[0].RecoveryAction; !got.Valid || got.String != "awaiting_schedule" {
+		t.Fatalf("recovery_action = %#v, want awaiting_schedule", got)
+	}
+}
+
 // ── HTTP contract: event_filters JSON shape & PATCH semantics ──────────────
 //
 // These tests pin the wire contract the frontend depends on: a real JSON

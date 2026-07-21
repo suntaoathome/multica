@@ -236,7 +236,7 @@ func TestProviderNetworkRetrySchedule(t *testing.T) {
 		{"non-retryable reason never retries", "agent_error.unknown", 1, 2, false},
 	}
 	for _, tc := range eligCases {
-		if got := retryEligible(tc.reason, mkTask(tc.attempt, tc.max)); got != tc.want {
+		if got := retryEligible(tc.reason, "", mkTask(tc.attempt, tc.max)); got != tc.want {
 			t.Errorf("%s: retryEligible(%q, attempt=%d/max=%d) = %v, want %v", tc.name, tc.reason, tc.attempt, tc.max, got, tc.want)
 		}
 	}
